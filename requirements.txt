@@ -1,0 +1,3 @@
+# working from https://github.com/openaustralia/morph-docker-python
+Unidecode==0.04.9
+-e git+https://github.com/openaustralia/scraperwiki-python.git@morph_defaults#egg=scraperwiki
