@@ -1,0 +1,23 @@
+- company merging
+  - clean name
+    - double spaces
+    - stuff in parens preceded by a space, possibly followed by a period
+  - identify corporate entity types (e.g. "Inc.")
+    - don't strip "LLP"
+    - Limited == Ltd? Keep distinct for now
+  - Decide on canonical forms
+    - Strip "[The] ... [Company/Corporation/Group/Enterprises]" for purposes of matching,
+      but don't used stripped version as canonical name (require some
+      campaign to use it).
+
+Can have
+
+Corner cases (handle last):
+- BIS Global (DBA: CharityEngine) (use DBA name)
+- AB Electrolux == Electrolux
+- Rivers (Australia) Pty Ltd == Rivers Australia != Rivers
+- Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
+- BBned / Tele2 Group (/-separated variants). Not A/S!
+- FINAE SAPI DE CV SOFOM ENR -- Only "FINAE" is the company name
+- The Burton Corporation == Burton != The Burton
+- Subsidiaries
