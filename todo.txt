@@ -14,10 +14,7 @@ Can have
 
 Corner cases (handle last):
 - BIS Global (DBA: CharityEngine) (use DBA name)
-- AB Electrolux == Electrolux
 - Rivers (Australia) Pty Ltd == Rivers Australia != Rivers
 - Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
-- BBned / Tele2 Group (/-separated variants). Not A/S!
-- FINAE SAPI DE CV SOFOM ENR -- Only "FINAE" is the company name
-- The Burton Corporation == Burton != The Burton
-- Subsidiaries
+- BBned / Tele2 Group (/-separated variants? subsidiaries?). Not A/S!
+- Subsidiaries (data structure)

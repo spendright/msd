@@ -2,6 +2,7 @@ import codecs
 import logging
 import sqlite3
 import re
+from collections import defaultdict
 from os import environ
 from os import rename
 from os.path import exists
@@ -22,20 +23,34 @@ DB_TO_URL = {
 
 # various misspellings of company names
 COMPANY_CORRECTIONS = {
+    'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
+    'Woolworths Australia': 'Woolworths Limited',
 }
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['HP', 'Hewlett-Packard'],
-    ['LG', 'LG Electronics', 'LGE'],
+    ['LG', 'LGE', 'LG Electronics'],
+    ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
+    # techincally, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
+    # the multinational. Not worrying about this now and I don't think this is
+    # what they meant anyway.
+    ['Wells Fargo', 'Wells Fargo Bank'],
+    ['Whole Foods', 'Whole Foods Market'],
+    ['Wibra', 'Wibra Supermarkt'],
 ]
 
-# X & Co. -- okay to strip
-X_AND_CO_RE = re.compile(
-    r'^(?P<company>.*) \& Co\.?$'
+
+# "The X Co." -- okay to strip
+THE_X_CO_RE = re.compile(
+    r'^The (?P<company>.*) Co\.$')
+
+# X [&] Co. -- okay to strip
+X_CO_RE = re.compile(
+    r'^(?P<company>.*)( \&)? Co\.$'
 )
 
 # "The X Company" -- okay for matching, but don't use as short name
@@ -92,8 +107,9 @@ COMPANY_TYPE_RE = re.compile(
     r'|SA'
     r'|SAPI DE CV SOFOM ENR'
     r'|SARL'
+    r'|Sarl'
     r'|SE'
-    r'|S\.A\.'
+    r'|S\.A\.?'
     r'|S\.A\.U\.'
     r'|S\.R\.L\.'
     r'|S\.p\.A\.'
@@ -107,9 +123,19 @@ COMPANY_TYPE_RE = re.compile(
 COMPANY_TYPE_CORRECTIONS = {
     'Llp': 'LLP',
     'NV': 'N.V.',
+    'S.A': 'S.A.',
+    'Sarl': 'SARL',
     'b.v.': 'B.V.',
     'gmbh': 'GmbH',
     'inc': 'Inc',
+}
+
+UNSTRIPPABLE_COMPANY_TYPES = {
+    'LLP',
+}
+
+UNSTRIPPABLE_COMPANIES = {
+    'Woolworths Limited'
 }
 
 
@@ -127,12 +153,18 @@ WHITESPACE_RE = re.compile(r'\s+')
 def main():
     logging.basicConfig(format='%(name)s: %(message)s', level=logging.INFO)
 
+    companies = get_companies()
+    orig2sn, sn2fn = match_company_names(companies)
+
+    # map short names to original names
+    sn2origs = defaultdict(list)
+    for orig, sn in sorted(orig2sn.items()):
+        sn2origs[sn].append(orig)
+
     out = codecs.getwriter('utf8')(stdout)
-    for company in get_companies():
-        display_variants, matching_variants = company_name_variants(company)
-        out.write(u'{}: {} {}\n'.format(
-            company, repr(sorted(display_variants)),
-            repr(sorted(matching_variants))))
+    for sn in sorted(sn2origs):
+        out.write(u'{} ({}): {}\n'.format(sn, sn2fn.get(sn, ''),
+                                          repr(sorted(sn2origs.get(sn, '')))))
 
 
 def simplify_whitespace(s):
@@ -157,40 +189,132 @@ def norm_with_variants(s):
     return variants
 
 
+def match_company_names(companies, aliases=None):
+    """Match up similar company names."""
+    nv2dvs = defaultdict(set)  # normed variant to display variants
+    nv2origs = defaultdict(set)  # normed variant to original names
+    nv2nvs = {} # normed variant to set of matched variants including itself
+
+    if aliases is None:
+        aliases = COMPANY_ALIASES
+
+    for dvs in COMPANY_ALIASES:
+        nvs = set()
+        for dv in dvs:
+            for nv in norm_with_variants(dv):
+                nv2dvs[nv].add(dv)
+                nvs.add(nv)
+
+        # put all normed variants in same set
+        merge_sets(nv2nvs, nvs)
+
+    for orig in companies:
+        if not orig:
+            continue
+        dvs, nvs = company_name_variants(orig)
+        for nv in nvs:
+            nv2dvs[nv].update(dvs)
+            nv2origs[nv].add(orig)
+        merge_sets(nv2nvs, nvs)
+
+    orig2sn = {}  # original company name to short name
+    sn2fn = {}  # short name to full name
+
+    seen_ids = set()
+    for nvs in nv2nvs.itervalues():
+        if id(nvs) in seen_ids:
+            continue
+        seen_ids.add(id(nvs))
+
+        dvs = set()
+        for nv in nvs:
+            dvs.update(nv2dvs[nv])
+
+        sn, fn = pick_short_and_full_company_name(dvs)
+
+        sn2fn[sn] = fn
+        for nv in nvs:
+            for orig in nv2origs[nv]:
+                orig2sn[orig] = sn
+
+    return orig2sn, sn2fn
+
+
+def pick_short_and_full_company_name(variants):
+    if not variants:
+        raise ValueError('need at least one company name')
+
+    # shortest name, ties broken by, not all lower/upper, has acceents
+    short_name = sorted(variants,
+                        key=lambda v: (len(v), v == v.lower(), v == v.upper(),
+                                       -len(v.encode('utf8'))))[0]
+
+    # longest name, ties broken by, not all lower/upper, has acceents
+    full_name = sorted(variants,
+                       key=lambda v: (-len(v), v != v.lower(), v != v.upper(),
+                                      -len(v.encode('utf8'))))[0]
+
+    return short_name, full_name
+
+
+
+
+
+
+
 def company_name_variants(company):
+    """Convert a company name to a set of variants for display,
+    and a set of variants for matching only.
+    """
+
     display_variants = set()  # usable as display name
     matching_variants = set()  # usable for matching
 
-    company = simplify_whitespace(company)
+    def handle(company):
+        company = simplify_whitespace(company)
 
-    company = COMPANY_CORRECTIONS.get(company) or company
+        company = COMPANY_CORRECTIONS.get(company) or company
 
-    m = COMPANY_TYPE_RE.match(company)
-    if m:
-        company = m.group('company')
-        c_type = m.group('type')
-        c_type = COMPANY_TYPE_CORRECTIONS.get(c_type) or c_type
-        display_variants.add(company + ' ' + c_type)
+        m = COMPANY_TYPE_RE.match(company)
+        if m:
+            company = m.group('company')
+            c_type = m.group('type')
+            c_type = COMPANY_TYPE_CORRECTIONS.get(c_type) or c_type
+            c_full = company + ' ' + c_type
+            display_variants.add(c_full)
 
-    display_variants.add(company)
+            if (c_type in UNSTRIPPABLE_COMPANY_TYPES or
+                c_full in UNSTRIPPABLE_COMPANIES):
+                return
 
-    m = X_AND_CO_RE.match(company)
-    if m:
-        display_variants.add(m.group('company'))
-    else:
+        display_variants.add(company)
+
+        m = THE_X_CO_RE.match(company)
+        if m:
+            display_variants.add(m.group('company'))
+            return
+
+        m = X_CO_RE.match(company)
+        if m:
+            display_variants.add(m.group('company'))
+            return
+
         m = THE_X_COMPANY_RE.match(company)
         if m:
             matching_variants.add(m.group('company'))
-        else:
-            m = X_COMPANY_RE.match(company)
-            if m:
-                matching_variants.add(m.group('company'))
+            return
+
+        m = X_COMPANY_RE.match(company)
+        if m:
+            matching_variants.add(m.group('company'))
+            return
+
+    handle(company)
 
     normed_variants = set()
-
     for variants in display_variants, matching_variants:
-        for v in variants:
-            normed_variants.update(norm_with_variants(v))
+        for variant in variants:
+            normed_variants.update(norm_with_variants(variant))
 
     return display_variants, normed_variants
 
@@ -214,7 +338,7 @@ def merge_sets(elt_to_set, elts):
 
     for e in elts:
         if e not in elt_to_set:
-            elt_to_set[e] = set([e])
+            elt_to_set[e] = {e}
 
     dest = elt_to_set[elts[0]]
 
