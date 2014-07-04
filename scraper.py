@@ -31,6 +31,7 @@ COMPANY_CORRECTIONS = {
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
+    ['Coca-Cola', 'The Coca-Cola Company'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['HP', 'Hewlett-Packard'],
     ['LG', 'LGE', 'LG Electronics'],
@@ -87,7 +88,9 @@ COMPANY_TYPE_RE = re.compile(
     r'|GmbH \& Co\. KGaA'
     r'|GmbH'
     r'|Inc\.?'
+    r'|Incorporated'
     r'|KG\.?'
+    r'|Llc'
     r'|LLC'
     r'|LLP'
     r'|LP'
@@ -121,6 +124,8 @@ COMPANY_TYPE_RE = re.compile(
 )
 
 COMPANY_TYPE_CORRECTIONS = {
+    'Incorporated': 'Inc',
+    'Llc': 'LLC',
     'Llp': 'LLP',
     'NV': 'N.V.',
     'S.A': 'S.A.',
@@ -154,17 +159,20 @@ def main():
     logging.basicConfig(format='%(name)s: %(message)s', level=logging.INFO)
 
     companies = get_companies()
-    orig2sn, sn2fn = match_company_names(companies)
-
-    # map short names to original names
-    sn2origs = defaultdict(list)
-    for orig, sn in sorted(orig2sn.items()):
-        sn2origs[sn].append(orig)
+    sn2info = match_company_names(companies)
 
     out = codecs.getwriter('utf8')(stdout)
-    for sn in sorted(sn2origs):
-        out.write(u'{} ({}): {}\n'.format(sn, sn2fn.get(sn, ''),
-                                          repr(sorted(sn2origs.get(sn, '')))))
+    for sn, info in sorted(sn2info.items()):
+        line = sn
+        if info['company_full'] != sn:
+            line += u' ({})'.format(info['company_full'])
+
+        other_names = [c for c in info['companies']
+                       if c not in (sn, info['company_full'])]
+        if other_names:
+            line += u': {}'.format('; '.join(other_names))
+
+        out.write(line + '\n')
 
 
 def simplify_whitespace(s):
@@ -217,8 +225,7 @@ def match_company_names(companies, aliases=None):
             nv2origs[nv].add(orig)
         merge_sets(nv2nvs, nvs)
 
-    orig2sn = {}  # original company name to short name
-    sn2fn = {}  # short name to full name
+    sn2info = {}  # short name to 'companies', 'company_full'
 
     seen_ids = set()
     for nvs in nv2nvs.itervalues():
@@ -230,14 +237,18 @@ def match_company_names(companies, aliases=None):
         for nv in nvs:
             dvs.update(nv2dvs[nv])
 
-        sn, fn = pick_short_and_full_company_name(dvs)
+        sn, company_full = pick_short_and_full_company_name(dvs)
 
-        sn2fn[sn] = fn
+        companies = set()
         for nv in nvs:
-            for orig in nv2origs[nv]:
-                orig2sn[orig] = sn
+            companies.update(nv2origs[nv])
 
-    return orig2sn, sn2fn
+        sn2info[sn] = {
+            'companies': companies,
+            'company_full': company_full,
+        }
+
+    return sn2info
 
 
 def pick_short_and_full_company_name(variants):
