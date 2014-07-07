@@ -1,9 +1,22 @@
+- add Venture(s) and Holding(s) to company type list
+- merge full company entries, not just sets of normalized names
 - company merging
-  - strip group/company if company has a matching brand
+  - allow matching name as short name if company has that brand
+  - (e.g. The Coca-Cola Company has the brand Coca-Cola)
+- reconstruct brands list
+  - always include rated brands
+  - try not to use climate_counts if we can avoid it
+  - strip blank, "Other"
+  - assume short name is also brand unless:
+    - company name ends with group, enterprises, etc.
+    - company name starts with a brand name (e.g. "Kraft Foods")
+    - master company data omits it
+    - if no brands, use short name!
+- merge/capitalize categories
+
 
 Corner cases (handle last):
 - BIS Global (DBA: CharityEngine) (use DBA name)
-- Rivers (Australia) Pty Ltd == Rivers Australia != Rivers
 - Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
 - BBned / Tele2 Group (/-separated variants? subsidiaries?). Not A/S!
 - Subsidiaries (data structure)

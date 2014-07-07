@@ -36,7 +36,7 @@ COMPANY_ALIASES = [
     ['HP', 'Hewlett-Packard'],
     ['LG', 'LGE', 'LG Electronics'],
     ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
-    # techincally, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
+    # technically, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
     # the multinational. Not worrying about this now and I don't think this is
     # what they meant anyway.
     ['Wells Fargo', 'Wells Fargo Bank'],
