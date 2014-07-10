@@ -17,8 +17,10 @@
 
 import logging
 import sqlite3
+from dumptruck import DumpTruck
 from os import environ
 from os import rename
+from os import remove
 from os.path import exists
 from tempfile import NamedTemporaryFile
 from urllib import urlencode
@@ -31,8 +33,56 @@ DB_TO_URL = {
 
 CHUNK_SIZE = 1024
 
-OUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
-OUT_DB_FILENAME = 'data.sqlite'
+OUTPUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
+OUTPUT_DB_FILENAME = 'data.sqlite'
+
+
+# map from table name to fields used for the primary key (not including
+# campaign_id). All key fields are currently TEXT
+TABLE_TO_KEY_FIELDS = {
+    # factual information about a brand (e.g. company, url, etc.)
+    'brand': ['company', 'brand'],
+    # factual information about which categories a brand belongs to
+    'brand_category': ['company', 'brand', 'category'],
+    # info about a campaign's creator, etc.
+    'campaign': ['campaign_id'],
+    # should you buy this brand?
+    'campaign_brand_rating': ['campaign_id', 'company', 'brand', 'scope'],
+    # should you buy from this company?
+    'campaign_company_rating': ['campaign_id', 'company', 'scope'],
+    # factual information about a company (e.g. url, email, etc.)
+    'company': ['company'],
+    # factual information about which categories a company belongs to
+    'company_category': ['company', 'category'],
+}
+
+
+RATING_FIELDS = [
+    # -1 (bad), 0 (mixed), or 1 (good). Lingua franca of ratings
+    ('judgment', 'TINYINT'),
+    # letter grade
+    ('grade', 'TEXT'),
+    # written description (e.g. cannot recommend)
+    ('description', 'TEXT'),
+    # numeric score (higher numbers are good)
+    ('score', 'NUMERIC'),
+    ('min_score', 'NUMERIC'),
+    ('max_score', 'NUMERIC'),
+    # ranking (low numbers are good)
+    ('rank', 'INTEGER'),
+    ('num_ranked', 'INTEGER'),
+    # url for details about the rating
+    ('url', 'TEXT'),
+]
+
+
+TABLE_TO_EXTRA_FIELDS = {
+    'campaign': [('last_scraped', 'TEXT')],
+    'campaign_brand_rating': RATING_FIELDS,
+    'campaing_company_rating': RATING_FIELDS,
+}
+
+
 
 
 log = logging.getLogger(__name__)
@@ -77,17 +127,46 @@ def download(url, dest):
         rename(f.name, dest)
 
 
-def out_db():
-    """Open a DB for output in a temp file"""
-    if not hasattr(out_db, '_db'):
-        out_db._db = sqlite3.connect(OUT_DB_TMP_FILENAME)
+def open_output_db():
+    """Open a DB for output into a temp file.
 
-    return out_db._db
+    If we haven't already opened it, initialize its tables."""
+    if not hasattr(open_output_db, '_db'):
+        if exists(OUTPUT_DB_TMP_FILENAME):
+            remove(OUTPUT_DB_TMP_FILENAME)
+
+        db = sqlite3.connect(OUTPUT_DB_TMP_FILENAME)
+
+        # init tables
+        for table, key_fields in sorted(TABLE_TO_KEY_FIELDS.items()):
+            sql = 'CREATE TABLE `{}` ('.format(table)
+            for k in key_fields:
+                sql += '`{}` TEXT, '.format(k)
+            for k, field_type in TABLE_TO_EXTRA_FIELDS.get(table) or ():
+                sql += '`{}` {}, '.format(k, field_type)
+            sql += 'PRIMARY KEY ({}))'.format(', '.join(key_fields))
+
+            db.execute(sql)
+
+        open_output_db._db = db
+
+    return open_output_db._db
 
 
-def close_out_db():
-    """Move out_db into place."""
-    out_db._db.close()
-    del out_db._db
+def open_output_dump_truck():
+    if not hasattr(open_output_dump_truck, '_dump_truck'):
+        open_output_db()
+        open_output_dump_truck._dump_truck = DumpTruck(OUTPUT_DB_TMP_FILENAME)
 
-    rename(OUT_DB_TMP_FILENAME, OUT_DB_FILENAME)
+    return open_output_dump_truck._dump_truck
+
+
+def close_output_db():
+    """Move output_db into place."""
+    open_output_db._db.close()
+    if hasattr(open_output_db, '_db'):
+        del open_output_db._db
+    if hasattr(open_output_dump_truck, '_dump_truck'):
+        del open_output_dumptruck._dump_truck
+
+    rename(OUTPUT_DB_TMP_FILENAME, OUTPUT_DB_FILENAME)

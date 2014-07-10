@@ -183,18 +183,18 @@ def name_matched_company(cd):
     'company_full' (a long, corporate version of the name),
     and 'keys' (a list of tuples of (campaign_id, company_in_campaign))
     """
-    short_name = pick_short_name_from_variants(cd['display'])
+    short_name = pick_short_name_from_variants(cd['display_names'])
 
     # if matching short name is shorter and matches a brand for one
     # of the companies, use that
     matching_short_name = pick_short_name_from_variants(
-        cd['display'] | cd['matching'])
+        cd['display_names'] | cd['matching_names'])
 
     if (matching_short_name != short_name and
         brand_exists(matching_short_name, cd['keys'])):
         short_name = matching_short_name
 
-    full_name = pick_full_name_from_variants(cd['display'])
+    full_name = pick_full_name_from_variants(cd['display_names'])
 
     return dict(
         company=short_name,
@@ -219,15 +219,22 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
 
     nv2cd = {}  # normed variant to company dictionary
 
+    # company dictionaries have these fields:
+    #
+    # keys: set of tuples of (campaign_id, company) (original company name)
+    # display_names: set of names appropriate for display
+    # matching_names: set of names for matching
+    # normed_names: set of normed variants of matching_names
+
     def add(display, matching, keys=()):
         # figure out normed variants, for merging
         normed = set()
         for mv in matching:
             normed.update(norm_with_variants(mv))
 
-        company = dict(keys=set(keys), display=set(display),
-                       matching=set(matching),
-                       normed=normed)
+        company = dict(keys=set(keys), display_names=set(display),
+                       matching_names=set(matching),
+                       normed_names=normed)
 
         # merge other company entries into our own
         for nv in sorted(normed):
@@ -235,14 +242,9 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
                 for k in company:
                     company[k] |= nv2cd[nv][k]
 
+        # make sure all normed variants point at this entry
         for nv in normed:
             nv2cd[nv] = company
-
-    # company dictionaries have these fields:
-    # keys: set of tuples of (campaign_id, company) (original company name)
-    # display: set of names appropriate for display
-    # matching: set of names appropriate for matching but probably not display
-    # normed: set of normed company name variants
 
     # handle aliases
     for variants in aliases:
