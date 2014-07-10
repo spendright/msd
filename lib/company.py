@@ -16,6 +16,7 @@
 """Merge and correct company information."""
 import re
 from collections import defaultdict
+from itertools import groupby
 from unidecode import unidecode
 
 from .db import open_db
@@ -31,7 +32,6 @@ COMPANY_CORRECTIONS = {
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
-    ['Coca-Cola', 'The Coca-Cola Company'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['HP', 'Hewlett-Packard'],
     ['LG', 'LGE', 'LG Electronics'],
@@ -175,83 +175,107 @@ def norm_with_variants(s):
     return variants
 
 
-def match_company_names(companies, aliases=None):
-    """Match up similar company names."""
-    nv2dvs = defaultdict(set)  # normed variant to display variants
-    nv2origs = defaultdict(set)  # normed variant to original names
-    nv2nvs = {} # normed variant to set of matched variants including itself
+def name_matched_company(cd):
+    """Take a company dictionary from match_companies, and return
+    a dict with the keys 'company' (a short name, used as a key),
+    'company_full' (a long, corporate version of the name),
+    and 'keys' (a list of tuples of (campaign_id, company_in_campaign))
+    """
+    short_name = pick_short_name_from_variants(cd['display'])
 
+    # if matching short name is shorter and matches a brand for one
+    # of the companies, use that
+    matching_short_name = pick_short_name_from_variants(
+        cd['display'] | cd['matching'])
+
+    if (matching_short_name != short_name and
+        brand_exists(matching_short_name, cd['keys'])):
+        short_name = matching_short_name
+
+    full_name = pick_full_name_from_variants(cd['display'])
+
+    return dict(
+        company=short_name,
+        company_full=full_name,
+        keys=tuple(cd['keys']))
+
+
+
+
+def match_companies(companies_with_campaign_ids=None, aliases=None):
+    """Match up similar company names.
+
+    companies -- sequence of (company, [campaign_ids]). Defaults to
+                 get_companies_with_campaign_ids()
+    aliases -- sequence of list of matching company names. Defaults to
+               COMPANY_ALIASES
+    """
+    if companies_with_campaign_ids is None:
+        companies_with_campaign_ids = get_companies_with_campaign_ids()
     if aliases is None:
         aliases = COMPANY_ALIASES
 
-    for dvs in COMPANY_ALIASES:
-        nvs = set()
-        for dv in dvs:
-            for nv in norm_with_variants(dv):
-                nv2dvs[nv].add(dv)
-                nvs.add(nv)
+    nv2cd = {}  # normed variant to company dictionary
 
-        # put all normed variants in same set
-        merge_sets(nv2nvs, nvs)
+    def add(display, matching, keys=()):
+        # figure out normed variants, for merging
+        normed = set()
+        for mv in matching:
+            normed.update(norm_with_variants(mv))
 
-    for orig in companies:
-        if not orig:
+        company = dict(keys=set(keys), display=set(display),
+                       matching=set(matching),
+                       normed=normed)
+
+        # merge other company entries into our own
+        for nv in sorted(normed):
+            if nv in nv2cd:
+                for k in company:
+                    company[k] |= nv2cd[nv][k]
+
+        for nv in normed:
+            nv2cd[nv] = company
+
+    # company dictionaries have these fields:
+    # keys: set of tuples of (campaign_id, company) (original company name)
+    # display: set of names appropriate for display
+    # matching: set of names appropriate for matching but probably not display
+    # normed: set of normed company name variants
+
+    # handle aliases
+    for variants in aliases:
+        add(display=variants, matching=variants)
+
+    # handle real companies
+    for company, campaign_ids in companies_with_campaign_ids:
+        if not company:  # skip blank company names
             continue
-        dvs, nvs = company_name_variants(orig)
-        for nv in nvs:
-            nv2dvs[nv].update(dvs)
-            nv2origs[nv].add(orig)
-        merge_sets(nv2nvs, nvs)
+        display, matching = get_company_name_variants(company)
+        add(display, matching,
+            keys=[(campaign_id, company) for campaign_id in campaign_ids])
 
-    sn2info = {}  # short name to 'companies', 'company_full'
-
-    seen_ids = set()
-    for nvs in nv2nvs.itervalues():
-        if id(nvs) in seen_ids:
-            continue
-        seen_ids.add(id(nvs))
-
-        dvs = set()
-        for nv in nvs:
-            dvs.update(nv2dvs[nv])
-
-        sn, company_full = pick_short_and_full_company_name(dvs)
-
-        companies = set()
-        for nv in nvs:
-            companies.update(nv2origs[nv])
-
-        sn2info[sn] = {
-            'companies': companies,
-            'company_full': company_full,
-        }
-
-    return sn2info
+    # yield unique company dictionaries
+    ids_seen = set()
+    for cd in nv2cd.itervalues():
+        if id(cd) not in ids_seen:
+            yield cd
+            ids_seen.add(id(cd))
 
 
-def pick_short_and_full_company_name(variants):
-    if not variants:
-        raise ValueError('need at least one company name')
+def pick_short_name_from_variants(variants):
+    # shortest name, ties broken by, not all lower/upper, has accents
+    return sorted(variants,
+                  key=lambda v: (len(v), v == v.lower(), v == v.upper(),
+                                 -len(v.encode('utf8'))))[0]
 
-    # shortest name, ties broken by, not all lower/upper, has acceents
-    short_name = sorted(variants,
-                        key=lambda v: (len(v), v == v.lower(), v == v.upper(),
-                                       -len(v.encode('utf8'))))[0]
-
-    # longest name, ties broken by, not all lower/upper, has acceents
-    full_name = sorted(variants,
-                       key=lambda v: (-len(v), v != v.lower(), v != v.upper(),
-                                      -len(v.encode('utf8'))))[0]
-
-    return short_name, full_name
+def pick_full_name_from_variants(variants):
+    # longest name, ties broken by, not all lower/upper, has accents
+    return sorted(variants,
+                  key=lambda v: (-len(v), v == v.lower(), v == v.upper(),
+                                 -len(v.encode('utf8'))))[0]
 
 
-
-
-
-
-
-def company_name_variants(company):
+def get_company_name_variants(company):
     """Convert a company name to a set of variants for display,
     and a set of variants for matching only.
     """
@@ -300,12 +324,9 @@ def company_name_variants(company):
 
     handle(company)
 
-    normed_variants = set()
-    for variants in display_variants, matching_variants:
-        for variant in variants:
-            normed_variants.update(norm_with_variants(variant))
+    matching_variants |= display_variants
 
-    return display_variants, normed_variants
+    return display_variants, matching_variants
 
 
 def correct_company_type(c_type):
@@ -317,29 +338,25 @@ def correct_company_type(c_type):
         return c_type
 
 
-def merge_sets(elt_to_set, elts):
-    """Update elt_to_set so that all elements in elts point to the
-    same set, by merging sets."""
-    if not elts:
-        return
-
-    elts = sorted(elts)
-
-    for e in elts:
-        if e not in elt_to_set:
-            elt_to_set[e] = {e}
-
-    dest = elt_to_set[elts[0]]
-
-    # merge other sets into dest
-    for e in elts[1:]:
-        if elt_to_set[e] is not dest:
-            dest.update(elt_to_set[e])
-            elt_to_set[e] = dest
-
-
-def get_companies():
+def get_companies_with_campaign_ids():
     campaigns_db = open_db('campaigns')
 
-    return sorted(row[0] for row in campaigns_db.execute(
-        'SELECT company from campaign_company'))
+    cursor = campaigns_db.execute(
+        'SELECT company, campaign_id from campaign_company'
+        ' ORDER BY company')
+
+    for company, rows in groupby(cursor, key=lambda row: row['company']):
+        yield company, set(row['campaign_id'] for row in rows)
+
+
+def brand_exists(brand, keys):
+    campaigns_db = open_db('campaigns')
+
+    for campaign_id, company in keys:
+        rows = list(campaigns_db.execute(
+            'SELECT 1 FROM campaign_brand WHERE campaign_id = ?'
+            ' AND company = ? AND brand = ?', [campaign_id, company, brand]))
+        if rows:
+            return True
+
+    return False

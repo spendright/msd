@@ -14,6 +14,7 @@
     - if no brands, use short name!
 - merge/capitalize categories
 
+- match up orphaned brands to companies
 
 Corner cases (handle last):
 - BIS Global (DBA: CharityEngine) (use DBA name)

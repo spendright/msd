@@ -54,7 +54,9 @@ def open_db(name):
         else:
             log.info('opening local copy of {}'.format(filename))
 
-        open_db._name_to_db[name] = sqlite3.connect(filename)
+        db = sqlite3.connect(filename)
+        db.row_factory = sqlite3.Row
+        open_db._name_to_db[name] = db
 
     return open_db._name_to_db[name]
 
