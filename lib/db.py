@@ -31,6 +31,9 @@ DB_TO_URL = {
 
 CHUNK_SIZE = 1024
 
+OUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
+OUT_DB_FILENAME = 'data.sqlite'
+
 
 log = logging.getLogger(__name__)
 
@@ -72,3 +75,19 @@ def download(url, dest):
 
         f.close()
         rename(f.name, dest)
+
+
+def out_db():
+    """Open a DB for output in a temp file"""
+    if not hasattr(out_db, '_db'):
+        out_db._db = sqlite3.connect(OUT_DB_TMP_FILENAME)
+
+    return out_db._db
+
+
+def close_out_db():
+    """Move out_db into place."""
+    out_db._db.close()
+    del out_db._db
+
+    rename(OUT_DB_TMP_FILENAME, OUT_DB_FILENAME)

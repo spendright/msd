@@ -1,8 +1,3 @@
-- add Venture(s) and Holding(s) to company type list
-- merge full company entries, not just sets of normalized names
-- company merging
-  - allow matching name as short name if company has that brand
-  - (e.g. The Coca-Cola Company has the brand Coca-Cola)
 - reconstruct brands list
   - always include rated brands
   - try not to use climate_counts if we can avoid it

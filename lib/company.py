@@ -67,6 +67,8 @@ X_COMPANY_RE = re.compile(
     r'|Enterprises'
     r'|Group'
     r'|Gruppe'
+    r'|Holdings'
+    r'|Ventures?'
     r')$'
 )
 
