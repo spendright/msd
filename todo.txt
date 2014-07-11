@@ -1,4 +1,7 @@
-- reconstruct brands list
+- generalize matching; basically need something that can take items and a function mapping them to variants, plus
+  some hard-coded variants, and then output a sequence of lists of matched items.
+  - use this for brands, categories, etc.
+- improve brands list
   - always include rated brands
   - try not to use climate_counts if we can avoid it
   - strip blank, "Other"
@@ -7,6 +10,8 @@
     - company name starts with a brand name (e.g. "Kraft Foods")
     - master company data omits it
     - if no brands, use short name!
+  - omit brands that have other brands from the same campaign as their prefix
+    (e.g. XPS, XPS 10; iPod, iPod nano)
 - merge/capitalize categories
 
 - match up orphaned brands to companies
