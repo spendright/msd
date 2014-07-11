@@ -167,6 +167,51 @@ def close_output_db():
     if hasattr(open_output_db, '_db'):
         del open_output_db._db
     if hasattr(open_output_dump_truck, '_dump_truck'):
-        del open_output_dumptruck._dump_truck
+        del open_output_dump_truck._dump_truck
 
     rename(OUTPUT_DB_TMP_FILENAME, OUTPUT_DB_FILENAME)
+
+
+def clean_row(row):
+    """Convert a row to a dict, strip None values."""
+    if row is None:
+        return None
+
+    return dict((k, row[k]) for k in row.keys() if row[k] is not None)
+
+
+def select_campaign_brand(campaign_id, company, brand):
+    db = open_db('campaigns')
+
+    cursor = db.execute(
+        'SELECT * FROM campaign_brand WHERE campaign_id = ?'
+        ' AND company = ? AND brand = ?', [campaign_id, company, brand])
+    return clean_row(cursor.fetchone())
+
+
+def select_campaign_brands(campaign_id, company):
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute(
+                'SELECT * FROM campaign_brand WHERE campaign_id = ?'
+                ' AND company = ?', [campaign_id, company])]
+
+
+def select_campaign_brand_ratings(campaign_id, company, brand):
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute(
+                'SELECT * FROM campaign_brand_rating WHERE campaign_id = ?'
+                ' AND company = ? AND brand = ?',
+                [campaign_id, company, brand])]
+
+
+def select_campaign_company(campaign_id, company):
+    db = open_db('campaigns')
+
+    cursor = db.execute(
+        'SELECT * FROM campaign_company WHERE campaign_id = ?'
+        ' AND company = ?', [campaign_id, company])
+    return clean_row(cursor.fetchone())

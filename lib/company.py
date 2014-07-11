@@ -15,11 +15,13 @@
 #   limitations under the License.
 """Merge and correct company information."""
 import re
-from collections import defaultdict
 from itertools import groupby
 from unidecode import unidecode
 
+from .brand import get_brand_to_row
 from .db import open_db
+from .db import open_output_dump_truck
+from .db import select_campaign_company
 
 
 # various misspellings of company names
@@ -155,51 +157,59 @@ WHITESPACE_RE = re.compile(r'\s+')
 
 
 
-def simplify_whitespace(s):
-    """Strip s, and use only single spaces within s."""
-    return WHITESPACE_RE.sub(' ', s.strip())
+def handle_matched_company(cd):
+    """Take in a company dictionary from match_companies(), and
+    output rows about that company to the database.
 
+    This handles writing all rows except for the "campaign" table.
 
-def norm(s):
-    return unidecode(s).lower()
-
-
-def norm_with_variants(s):
-    variants = set()
-
-    variants.add(norm(CAMEL_CASE_RE.sub(' ', s)))
-
-    norm_s = norm(s)
-    variants.add(norm_s)
-    variants.add(norm_s.replace('-', ''))
-    variants.add(norm_s.replace('-', ' '))
-
-    return variants
-
-
-def name_matched_company(cd):
-    """Take a company dictionary from match_companies, and return
-    a dict with the keys 'company' (a short name, used as a key),
-    'company_full' (a long, corporate version of the name),
-    and 'keys' (a list of tuples of (campaign_id, company_in_campaign))
+    (or will eventually)
     """
-    short_name = pick_short_name_from_variants(cd['display_names'])
+    dt = open_output_dump_truck()
+
+    # get brands
+    brand_to_row = get_brand_to_row(cd['keys'])
+
+    # pick a canonical name for this company
+    short_name, full_name = name_company(
+        cd['display_names'], cd['matching_names'], set(brand_to_row))
+
+    # store brands
+    for brand_row in brand_to_row.itervalues():
+        brand_row['company'] = short_name
+        dt.upsert(brand_row, 'brand')
+
+    # merge company rows
+    company_row = {}
+
+    for campaign_id, company in sorted(cd['keys']):
+         company_row.update(select_campaign_company(campaign_id, company))
+
+    del company_row['campaign_id']   # should be at least one match!
+
+    company_row['company'] = short_name
+    company_row['company_full'] = full_name
+
+    # store company row
+    dt.upsert(company_row, 'company')
+
+
+def name_company(display_names, matching_names, brands):
+    """Return short and full names for a company."""
+    short_name = pick_short_name_from_variants(display_names)
 
     # if matching short name is shorter and matches a brand for one
     # of the companies, use that
     matching_short_name = pick_short_name_from_variants(
-        cd['display_names'] | cd['matching_names'])
+        display_names | matching_names)
 
     if (matching_short_name != short_name and
-        brand_exists(matching_short_name, cd['keys'])):
+        matching_short_name in brands):
         short_name = matching_short_name
 
-    full_name = pick_full_name_from_variants(cd['display_names'])
+    full_name = pick_full_name_from_variants(display_names)
 
-    return dict(
-        company=short_name,
-        company_full=full_name,
-        keys=tuple(cd['keys']))
+    return short_name, full_name
 
 
 
@@ -353,14 +363,23 @@ def get_companies_with_campaign_ids():
         yield company, set(row['campaign_id'] for row in rows)
 
 
-def brand_exists(brand, keys):
-    campaigns_db = open_db('campaigns')
+def simplify_whitespace(s):
+    """Strip s, and use only single spaces within s."""
+    return WHITESPACE_RE.sub(' ', s.strip())
 
-    for campaign_id, company in keys:
-        rows = list(campaigns_db.execute(
-            'SELECT 1 FROM campaign_brand WHERE campaign_id = ?'
-            ' AND company = ? AND brand = ?', [campaign_id, company, brand]))
-        if rows:
-            return True
 
-    return False
+def norm(s):
+    return unidecode(s).lower()
+
+
+def norm_with_variants(s):
+    variants = set()
+
+    variants.add(norm(CAMEL_CASE_RE.sub(' ', s)))
+
+    norm_s = norm(s)
+    variants.add(norm_s)
+    variants.add(norm_s.replace('-', ''))
+    variants.add(norm_s.replace('-', ' '))
+
+    return variants
