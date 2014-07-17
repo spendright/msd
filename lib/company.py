@@ -17,18 +17,21 @@
 import logging
 import re
 from itertools import groupby
-from unidecode import unidecode
 
 from .brand import get_brand_to_row
 from .db import open_db
 from .db import open_output_dump_truck
 from .db import select_campaign_company
 from .norm import group_by_keys
+from .norm import merge_dicts
+from .norm import norm_with_variants
+from .norm import simplify_whitespace
 
 log = logging.getLogger(__name__)
 
 # various misspellings of company names
 COMPANY_CORRECTIONS = {
+    'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
@@ -37,9 +40,15 @@ COMPANY_CORRECTIONS = {
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
+    ['Anheuser-Busch', 'Anheuser-Busch InBev'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['HP', 'Hewlett-Packard'],
+    ['Illy', u'illycaffè'],
+    ['JetBlue', 'JetBlue Airways'],
+    ['Kellogg', "Kellogg's"],  # might solve this with a brand?
+    ['Lidl', 'Lidl Stiftung'],
     ['LG', 'LGE', 'LG Electronics'],
+    ['New Look', 'New Look Retailers'],
     ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
     # technically, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
     # the multinational. Not worrying about this now and I don't think this is
@@ -56,7 +65,7 @@ THE_X_CO_RE = re.compile(
 
 # X [&] Co. -- okay to strip
 X_CO_RE = re.compile(
-    r'^(?P<company>.*)( \&)? Co\.$'
+    r'^(?P<company>.*?)( \&)? Co\.$'
 )
 
 # "The X Company" -- okay for matching, but don't use as short name
@@ -66,13 +75,15 @@ THE_X_COMPANY_RE = re.compile(
 # "X Company" -- okay for matching, but don't use as short name
 X_COMPANY_RE = re.compile(
     r'^(?P<company>.*) ('
-    r'Co.'
+    r'Brands'
+    r'|Co.'
     r'|Company'
     r'|Corporation'
     r'|Enterprises'
     r'|Group'
     r'|Gruppe'
-    r'|Holdings'
+    r'|Holdings?'
+    r'|Products'
     r'|Ventures?'
     r')$'
 )
@@ -80,14 +91,16 @@ X_COMPANY_RE = re.compile(
 
 
 COMPANY_TYPE_RE = re.compile(
-    r'^(?P<company>.*?),? (?P<type>'
+    r'^(?P<company>.*?)(?P<intl1> International)?,? (?P<type>'
     r'A\.?& S\. Klein GmbH \& Co\. KG'
     r'|A/S'
     r'|AB'
     r'|AG'
     r'|AS'
     r'|Ab'
+    r'|BV'
     r'|B\.V\.'
+    r'|B.V. Nederland'
     r'|C\.V\.'
     r'|Corp.'
     r'|GmbH \& C[oO]\. [oO]HG'
@@ -96,6 +109,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|GmbH'
     r'|Inc\.?'
     r'|Incorporated'
+    r'|International'
     r'|KG\.?'
     r'|Llc'
     r'|LLC'
@@ -105,6 +119,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|Llp'
     r'|Ltd\.?'
     r'|Ltda\.?'
+    r'|nv'
     r'|NV'
     r'|N\.V\.'
     r'|PBC'  # "Public Benefit Corporation"? Only on B Corp site
@@ -117,29 +132,33 @@ COMPANY_TYPE_RE = re.compile(
     r'|SA'
     r'|SAPI DE CV SOFOM ENR'
     r'|SARL'
-    r'|Sarl'
     r'|SE'
     r'|S\.A\.?'
     r'|S\.A\.U\.'
     r'|S\.R\.L\.'
     r'|S\.p\.A\.'
+    r'|Sarl'
+    r'|SpA'
     r'|b\.v\.'
     r'|gmbh'
     r'|inc'
     r'|plc'
-    r')$'
+    r')(?P<intl2> International)?$'
 )
 
 COMPANY_TYPE_CORRECTIONS = {
+    'BV': 'B.V.',
     'Incorporated': 'Inc',
     'Llc': 'LLC',
     'Llp': 'LLP',
     'NV': 'N.V.',
     'S.A': 'S.A.',
     'Sarl': 'SARL',
+    'SpA': 'S.p.A.',
     'b.v.': 'B.V.',
     'gmbh': 'GmbH',
     'inc': 'Inc',
+    'nv': 'N.V.',
 }
 
 UNSTRIPPABLE_COMPANY_TYPES = {
@@ -147,17 +166,9 @@ UNSTRIPPABLE_COMPANY_TYPES = {
 }
 
 UNSTRIPPABLE_COMPANIES = {
-    'Woolworths Limited'
+    'Globe International',
+    'Woolworths Limited',
 }
-
-
-# use this to turn e.g. "babyGap" into "baby Gap"
-# this can also turn "G.I. Joe" into "G. I. Joe"
-CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
-
-# use to remove excess whitespace
-WHITESPACE_RE = re.compile(r'\s+')
-
 
 
 def handle_matched_company(cd):
@@ -258,7 +269,7 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
         to_merge.append({'keys': keys, 'display_names': set(display),
                          'matching_names': set(matching)})
 
-    # match up company dicts
+    # match up company dicts and merge them together
     def keyfunc(cd):
         normed_variants = set()
         for name in cd['matching_names']:
@@ -267,11 +278,7 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
 
     # and merge them together
     for cd_group in group_by_keys(to_merge, keyfunc):
-        merged = {'keys': set(), 'display_names': set(),
-                  'matching_names': set()}
-        for cd in cd_group:
-            for k in merged:
-                merged[k].update(cd[k])
+        merged = merge_dicts(cd_group)
 
         if not merged['keys'] and merged['display_names']:
             # this can happen if hard-coded variants don't match anything
@@ -309,9 +316,11 @@ def get_company_name_variants(company):
         m = COMPANY_TYPE_RE.match(company)
         if m:
             company = m.group('company')
+            intl1 = m.group('intl1') or ''
             c_type = m.group('type')
+            intl2 = m.group('intl2') or ''
             c_type = COMPANY_TYPE_CORRECTIONS.get(c_type) or c_type
-            c_full = company + ' ' + c_type
+            c_full = company + intl1 + ' ' + c_type + intl2
             display_variants.add(c_full)
 
             if (c_type in UNSTRIPPABLE_COMPANY_TYPES or
@@ -344,6 +353,12 @@ def get_company_name_variants(company):
 
     matching_variants.update(display_variants)
 
+    # handle slashes in company names
+    for mv in list(matching_variants):
+        if '/' in mv:
+            matching_variants.update(
+                filter(None, (part.strip() for part in mv.split('/'))))
+
     return display_variants, matching_variants
 
 
@@ -365,25 +380,3 @@ def get_companies_with_campaign_ids():
 
     for company, rows in groupby(cursor, key=lambda row: row['company']):
         yield company, set(row['campaign_id'] for row in rows)
-
-
-def simplify_whitespace(s):
-    """Strip s, and use only single spaces within s."""
-    return WHITESPACE_RE.sub(' ', s.strip())
-
-
-def norm(s):
-    return unidecode(s).lower()
-
-
-def norm_with_variants(s):
-    variants = set()
-
-    variants.add(norm(CAMEL_CASE_RE.sub(' ', s)))
-
-    norm_s = norm(s)
-    variants.add(norm_s)
-    variants.add(norm_s.replace('-', ''))
-    variants.add(norm_s.replace('-', ' '))
-
-    return variants

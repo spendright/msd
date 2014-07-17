@@ -1,6 +1,4 @@
-- generalize matching; basically need something that can take items and a function mapping them to variants, plus
-  some hard-coded variants, and then output a sequence of lists of matched items.
-  - use this for brands, categories, etc.
+- use generalized matching for brands, categories, etc.
 - improve brands list
   - always include rated brands
   - try not to use climate_counts if we can avoid it
@@ -10,9 +8,8 @@
     - company name starts with a brand name (e.g. "Kraft Foods")
     - master company data omits it
     - if no brands, use short name!
-  - omit brands that have other brands from the same campaign as their prefix
-    (e.g. XPS, XPS 10; iPod, iPod nano)
 - merge/capitalize categories
+- treat "International" as a company type
 
 - match up orphaned brands to companies
 
@@ -21,3 +18,9 @@ Corner cases (handle last):
 - Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
 - BBned / Tele2 Group (/-separated variants? subsidiaries?). Not A/S!
 - Subsidiaries (data structure)
+-  flag brands that have other brands from the same campaign as their prefix
+    (e.g. XPS, XPS 10; iPod, iPod nano)
+- Acronyms:
+  - Associated British Foods (ABF)
+  - HCA - Hospital Corporation of America
+- Freitag lab. ag -> Could just be "Freitag"

@@ -14,6 +14,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """General utilities for merging and normalization."""
+import re
+from unidecode import unidecode
+
+# use this to turn e.g. "babyGap" into "baby Gap"
+# this can also turn "G.I. Joe" into "G. I. Joe"
+CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
+
+# use to remove excess whitespace
+WHITESPACE_RE = re.compile(r'\s+')
 
 
 def group_by_keys(items, keyfunc):
@@ -45,3 +54,55 @@ def group_by_keys(items, keyfunc):
         if id(group) not in ids_seen:
             yield group['items']
             ids_seen.add(id(group))
+
+
+
+def simplify_whitespace(s):
+    """Strip s, and use only single spaces within s."""
+    return WHITESPACE_RE.sub(' ', s.strip())
+
+
+def norm(s):
+    return unidecode(s).lower()
+
+
+def norm_with_variants(s):
+    variants = set()
+
+    variants.add(norm(CAMEL_CASE_RE.sub(' ', s)))
+
+    norm_s = norm(s)
+    variants.add(norm_s)
+    variants.add(norm_s.replace('-', ''))
+    variants.add(norm_s.replace('-', ' '))
+    variants.add(norm_s.replace(' and ', ' & '))
+    variants.add(norm_s.replace(' and ', '&'))
+    variants.add(norm_s.replace('&', ' & '))
+    variants.add(norm_s.replace('&', ' and '))
+    variants.add(norm_s.replace('.', ''))
+    variants.add(norm_s.replace('.', '. '))
+    variants.add(norm_s.replace("'", ''))
+
+    return set(simplify_whitespace(v) for v in variants)
+
+
+def merge_dicts(ds):
+    """Merge a list of dictionaries."""
+    result = {}
+
+    for d in ds:
+        for k, v in d.iteritems():
+            if k not in result:
+                if hasattr(v, 'copy'):
+                    result[k] = v.copy()
+                else:
+                    result[k] = v
+            else:
+                if hasattr(result[k], 'update'):
+                    result[k].update(v)
+                elif hasattr(result[k], 'extend'):
+                    result[k].extend(v)
+                elif v != '' or result[k] is None:
+                    result[k] = v
+
+    return result
