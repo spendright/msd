@@ -16,7 +16,7 @@
 """General utilities for merging and normalization."""
 
 
-def group(items, keyfunc):
+def group_by_keys(items, keyfunc):
     key_to_group = {}
 
     for item in items:

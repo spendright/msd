@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """Merge and correct company information."""
+import logging
 import re
 from itertools import groupby
 from unidecode import unidecode
@@ -22,7 +23,9 @@ from .brand import get_brand_to_row
 from .db import open_db
 from .db import open_output_dump_truck
 from .db import select_campaign_company
+from .norm import group_by_keys
 
+log = logging.getLogger(__name__)
 
 # various misspellings of company names
 COMPANY_CORRECTIONS = {
@@ -171,13 +174,7 @@ def handle_matched_company(cd):
     brand_to_row = get_brand_to_row(cd['keys'])
 
     # pick a canonical name for this company
-    short_name, full_name = name_company(
-        cd['display_names'], cd['matching_names'], set(brand_to_row))
-
-    # store brands
-    for brand_row in brand_to_row.itervalues():
-        brand_row['company'] = short_name
-        dt.upsert(brand_row, 'brand')
+    short_name, full_name = name_company(cd, set(brand_to_row))
 
     # merge company rows
     company_row = {}
@@ -193,25 +190,36 @@ def handle_matched_company(cd):
     # store company row
     dt.upsert(company_row, 'company')
 
+    # store brands
+    brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
+    for brand_row in brand_rows:
+        brand_row['company'] = short_name
+        dt.upsert(brand_row, 'brand')
 
-def name_company(display_names, matching_names, brands):
+    # put brands into company row (for debugging)
+    company_record = company_row
+    company_record['brands'] = brand_rows
+
+    return company_record
+
+
+
+def name_company(cd, brands=()):
     """Return short and full names for a company."""
-    short_name = pick_short_name_from_variants(display_names)
+    short_name = pick_short_name_from_variants(cd['display_names'])
 
     # if matching short name is shorter and matches a brand for one
     # of the companies, use that
     matching_short_name = pick_short_name_from_variants(
-        display_names | matching_names)
+        cd['display_names'] | cd['matching_names'])
 
     if (matching_short_name != short_name and
         matching_short_name in brands):
         short_name = matching_short_name
 
-    full_name = pick_full_name_from_variants(display_names)
+    full_name = pick_full_name_from_variants(cd['display_names'])
 
     return short_name, full_name
-
-
 
 
 def match_companies(companies_with_campaign_ids=None, aliases=None):
@@ -221,59 +229,55 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
                  get_companies_with_campaign_ids()
     aliases -- sequence of list of matching company names. Defaults to
                COMPANY_ALIASES
+
+    Yields company dicts, which contain:
+    keys -- set of tuples of (campaign_id, original_company_name)
+    display_names -- set of names appropriate for display
+    matching_names -- set of names for matching
     """
     if companies_with_campaign_ids is None:
         companies_with_campaign_ids = get_companies_with_campaign_ids()
     if aliases is None:
         aliases = COMPANY_ALIASES
 
-    nv2cd = {}  # normed variant to company dictionary
+    to_merge = []
 
-    # company dictionaries have these fields:
-    #
-    # keys: set of tuples of (campaign_id, company) (original company name)
-    # display_names: set of names appropriate for display
-    # matching_names: set of names for matching
-    # normed_names: set of normed variants of matching_names
-
-    def add(display, matching, keys=()):
-        # figure out normed variants, for merging
-        normed = set()
-        for mv in matching:
-            normed.update(norm_with_variants(mv))
-
-        company = dict(keys=set(keys), display_names=set(display),
-                       matching_names=set(matching),
-                       normed_names=normed)
-
-        # merge other company entries into our own
-        for nv in sorted(normed):
-            if nv in nv2cd:
-                for k in company:
-                    company[k] |= nv2cd[nv][k]
-
-        # make sure all normed variants point at this entry
-        for nv in normed:
-            nv2cd[nv] = company
-
-    # handle aliases
+    # use variants for matching
     for variants in aliases:
-        add(display=variants, matching=variants)
+        variants = set(variants)
+        to_merge.append({'keys': set(), 'display_names': set(),
+                         'matching_names': variants})
 
-    # handle real companies
+    # add in companies
     for company, campaign_ids in companies_with_campaign_ids:
         if not company:  # skip blank company names
             continue
+        keys=set((campaign_id, company) for campaign_id in campaign_ids)
         display, matching = get_company_name_variants(company)
-        add(display, matching,
-            keys=[(campaign_id, company) for campaign_id in campaign_ids])
 
-    # yield unique company dictionaries
-    ids_seen = set()
-    for cd in nv2cd.itervalues():
-        if id(cd) not in ids_seen:
-            yield cd
-            ids_seen.add(id(cd))
+        to_merge.append({'keys': keys, 'display_names': set(display),
+                         'matching_names': set(matching)})
+
+    # match up company dicts
+    def keyfunc(cd):
+        normed_variants = set()
+        for name in cd['matching_names']:
+            normed_variants.update(norm_with_variants(name))
+        return normed_variants
+
+    # and merge them together
+    for cd_group in group_by_keys(to_merge, keyfunc):
+        merged = {'keys': set(), 'display_names': set(),
+                  'matching_names': set()}
+        for cd in cd_group:
+            for k in merged:
+                merged[k].update(cd[k])
+
+        if not merged['keys'] and merged['display_names']:
+            # this can happen if hard-coded variants don't match anything
+            log.warn('orphaned company dict: {}'.format(repr(merged)))
+        else:
+            yield merged
 
 
 def pick_short_name_from_variants(variants):
@@ -338,7 +342,7 @@ def get_company_name_variants(company):
 
     handle(company)
 
-    matching_variants |= display_variants
+    matching_variants.update(display_variants)
 
     return display_variants, matching_variants
 

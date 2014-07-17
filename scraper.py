@@ -1,32 +1,38 @@
-import codecs
 import logging
-from sys import stdout
+from argparse import ArgumentParser
 
-from lib.company import get_companies
-from lib.company import match_company_names
+from lib.company import match_companies
+from lib.company import name_company
+from lib.company import handle_matched_company
 
 
 log = logging.getLogger('scraper')
 
 
 def main():
-    logging.basicConfig(format='%(name)s: %(message)s', level=logging.INFO)
+    opts = parse_args()
 
-    companies = get_companies()
-    sn2info = match_company_names(companies)
+    level = logging.DEBUG if opts.verbose else logging.INFO
+    logging.basicConfig(format='%(name)s: %(message)s', level=level)
 
-    out = codecs.getwriter('utf8')(stdout)
-    for sn, info in sorted(sn2info.items()):
-        line = sn
-        if info['company_full'] != sn:
-            line += u' ({})'.format(info['company_full'])
+    named_cds = sorted((name_company(cd)[0], cd) for cd in match_companies())
 
-        other_names = [c for c in info['companies']
-                       if c not in (sn, info['company_full'])]
-        if other_names:
-            line += u': {}'.format('; '.join(other_names))
+    for name, cd in named_cds:
+        log.info(name)
+        company_record = handle_matched_company(cd)
+        if company_record['company'] != name:
+            log.info(u'  renamed to {}'.format(company_record['company']))
+        log.debug(repr(company_record))
 
-        out.write(line + '\n')
+
+def parse_args(args=None):
+    parser = ArgumentParser()
+    parser.add_argument(
+        '-v', '--verbose', dest='verbose', default=False, action='store_true',
+        help='Enable debug logging')
+
+    return parser.parse_args(args)
+
 
 
 if __name__ == '__main__':
