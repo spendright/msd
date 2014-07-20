@@ -21,6 +21,7 @@ from .vendor.titlecase import titlecase
 
 from .db import output_row
 from .db import select_all_categories
+from .db import select_brand_categories
 from .db import select_company_categories
 from .norm import group_by_keys
 from .norm import merge_dicts
@@ -78,19 +79,45 @@ def get_company_categories(company, keys, category_map):
     category_rows = []
 
     for campaign_id, campaign_company in keys:
-        for row in select_company_categories(campaign_id, campaign_company):
-            category = category_map.get((campaign_id, row['category']))
-            if not category:  # bad category like "Other"
-                continue
-            row['category'] = category
-
-            category_rows.append(row)
+        category_rows.extend(_map_categories(
+            select_company_categories(campaign_id, campaign_company),
+            campaign_id, category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
         row = merge_dicts(cr_group)
+        yield _fix_category_row(row, company)
 
-        row['company'] = company
-        del row['campaign_id']
+
+def get_brand_categories(company, brand, keys, category_map):
+    category_rows = []
+
+    for campaign_id, campaign_company, campaign_brand in keys:
+        category_rows.extend(_map_categories(
+            select_brand_categories(
+                campaign_id, campaign_company, campaign_brand),
+            campaign_id, category_map))
+
+    for cr_group in group_by_keys(
+            category_rows, keyfunc=lambda cr: [cr['category']]):
+        row = merge_dicts(cr_group)
+        yield _fix_category_row(row, company, brand)
+
+
+def _map_categories(rows, campaign_id, category_map):
+    for row in rows:
+        category = category_map.get((campaign_id, row['category']))
+        if not category:  # bad category like "Other"
+            continue
+        row['category'] = category
 
         yield row
+
+def _fix_category_row(row, company, brand=None):
+    del row['campaign_id']
+
+    row['company'] = company
+    if brand is not None:
+        row['brand'] = brand
+
+    return row

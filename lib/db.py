@@ -281,7 +281,7 @@ def select_brand_categories(campaign_id, company, brand):
     db = open_db('campaigns')
 
     return [clean_row(row) for row in
-            db.execute('SELECT * from campaign_company_category'
+            db.execute('SELECT * from campaign_brand_category'
                        ' WHERE campaign_id = ? AND company = ?'
                        ' AND brand = ?',
                        [campaign_id, company, brand])]

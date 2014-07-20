@@ -16,9 +16,11 @@
 """Merge and correct company information."""
 import logging
 import re
+from collections import defaultdict
 from itertools import groupby
 
 from .brand import get_brands_for_company
+from .category import get_brand_categories
 from .category import get_company_categories
 from .db import open_db
 from .db import output_row
@@ -215,11 +217,6 @@ def handle_matched_company(cd, category_map):
 
     # store company categories, map, rating
     for campaign_id, campaign_company in cd['keys']:
-        # categories
-        for category_row in get_company_categories(
-                company_canonical, cd['keys'], category_map):
-            output_row(category_row, 'company_category')
-
         # map
         map_row = dict(
             campaign_id=campaign_id, campaign_company=campaign_company,
@@ -232,6 +229,11 @@ def handle_matched_company(cd, category_map):
             rating_row['company'] = company_canonical
             output_row(rating_row, 'campaign_company_rating')
 
+    # store company categories
+    for cat_row in get_company_categories(
+            company_canonical, cd['keys'], category_map):
+        output_row(cat_row, 'company_category')
+
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
     for brand_row in brand_rows:
@@ -240,8 +242,13 @@ def handle_matched_company(cd, category_map):
 
     # store brand map, rating
     campaign_to_company = dict(cd['keys'])
+    brand_to_keys = defaultdict(set)
+
     for (campaign_id, campaign_brand), brand_canonical in brand_map.items():
         campaign_company = campaign_to_company[campaign_id]
+
+        brand_to_keys[brand_canonical].add(
+            (campaign_id, campaign_company, campaign_brand))
 
         # map
         map_row = dict(
@@ -256,6 +263,11 @@ def handle_matched_company(cd, category_map):
             rating_row['company'] = company_canonical
             rating_row['brand'] = brand_canonical
             output_row(rating_row, 'campaign_brand_rating')
+
+    for brand_canonical, keys in sorted(brand_to_keys.items()):
+        for cat_row in get_brand_categories(
+                company_canonical, brand_canonical, keys, category_map):
+            output_row(cat_row, 'brand_category')
 
 
 def name_company(cd, brands=()):
