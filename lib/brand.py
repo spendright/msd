@@ -39,21 +39,24 @@ def get_brands_for_company(keys, company=None):
         return norm_with_variants(brand_row['brand'])
 
     brand_to_row = {}
+    brand_map = {}
 
     for brand_row_group in group_by_keys(brand_rows, keyfunc):
         # pick the version of the brand that is not all one case
         # and is longest
         brand = pick_brand_name(br['brand'] for br in brand_row_group)
 
+        # update mapping
+        for br in brand_row_group:
+            brand_map[(br['campaign_id'], br['brand'])] = brand
+
         brand_row = merge_dicts(brand_row_group)
-
         brand_row['brand'] = brand
-
         del brand_row['campaign_id']
 
         brand_to_row[brand] = brand_row
 
-    return brand_to_row
+    return brand_to_row, brand_map
 
 
 def pick_brand_name(variants):

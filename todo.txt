@@ -1,4 +1,4 @@
-- output category, campaigns, rating tables
+- output all other tables
 - improve brands list
   - assume short name is also brand unless:
     - company name ends with group, enterprises, etc.

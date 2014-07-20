@@ -180,15 +180,15 @@ def handle_matched_company(cd):
     (or will eventually)
     """
     # get brands
-    brand_to_row = get_brands_for_company(cd['keys'])
+    brand_to_row, brand_map = get_brands_for_company(cd['keys'])
 
     # pick a canonical name for this company
-    short_name, full_name = name_company(cd, set(brand_to_row))
+    company_canonical, company_full = name_company(cd, set(brand_to_row))
 
-    if short_name == full_name:
-        log.info(short_name)
+    if company_canonical == company_full:
+        log.info(company_canonical)
     else:
-        log.info(u'{} ({})'.format(short_name, full_name))
+        log.info(u'{} ({})'.format(company_canonical, company_full))
 
     # merge company rows
     company_row = {}
@@ -198,23 +198,34 @@ def handle_matched_company(cd):
 
     del company_row['campaign_id']   # should be at least one match!
 
-    company_row['company'] = short_name
-    company_row['company_full'] = full_name
+    company_row['company'] = company_canonical
+    company_row['company_full'] = company_full
 
     # store company row
     output_row(company_row, 'company')
 
+    # store company map
+    for campaign_id, campaign_company in cd['keys']:
+        company_map_row = dict(
+            campaign_id=campaign_id, campaign_company=campaign_company,
+            company=company_canonical)
+        output_row(company_map_row, 'campaign_company_map')
+
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
     for brand_row in brand_rows:
-        brand_row['company'] = short_name
+        brand_row['company'] = company_canonical
         output_row(brand_row, 'brand')
 
-    # put brands into company row (for debugging)
-    company_record = company_row
-    company_record['brands'] = brand_rows
-
-    return company_record
+    # store brand map
+    campaign_to_company = dict(cd['keys'])
+    for (campaign_id, campaign_brand), brand_canonical in brand_map.iteritems():
+        campaign_company = campaign_to_company[campaign_id]
+        brand_map_row = dict(
+            campaign_id=campaign_id, campaign_company=campaign_company,
+            campaign_brand=campaign_brand, company=company_canonical,
+            brand=brand_canonical)
+        output_row(brand_map_row, 'campaign_brand_map')
 
 
 

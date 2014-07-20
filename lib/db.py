@@ -47,11 +47,12 @@ TABLE_TO_KEY_FIELDS = {
     # info about a campaign's creator, etc.
     'campaign': ['campaign_id'],
     # map from brand in campaign to canonical version
-    'campaign_brand_map': ['campaign_id', 'company', 'brand'],
+    'campaign_brand_map': [
+        'campaign_id', 'campaign_company', 'campaign_brand'],
     # should you buy this brand?
     'campaign_brand_rating': ['campaign_id', 'company', 'brand', 'scope'],
     # map from company in campaign to canonical version
-    'campaign_company_map': ['campaign_id', 'company'],
+    'campaign_company_map': ['campaign_id', 'campaign_company'],
     # should you buy from this company?
     'campaign_company_rating': ['campaign_id', 'company', 'scope'],
     # factual information about a company (e.g. url, email, etc.)
@@ -233,3 +234,10 @@ def select_campaign_company(campaign_id, company):
         'SELECT * FROM campaign_company WHERE campaign_id = ?'
         ' AND company = ?', [campaign_id, company])
     return clean_row(cursor.fetchone())
+
+
+def select_all_campaigns():
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute('SELECT * FROM campaign ORDER BY campaign_id')]
