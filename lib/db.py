@@ -51,6 +51,8 @@ TABLE_TO_KEY_FIELDS = {
         'campaign_id', 'campaign_company', 'campaign_brand'],
     # should you buy this brand?
     'campaign_brand_rating': ['campaign_id', 'company', 'brand', 'scope'],
+    # map from category in campaign to canonical version
+    'campaign_category_map': ['campaign_id', 'campaign_category'],
     # map from company in campaign to canonical version
     'campaign_company_map': ['campaign_id', 'campaign_company'],
     # should you buy from this company?
@@ -83,7 +85,10 @@ RATING_FIELDS = [
 
 TABLE_TO_EXTRA_FIELDS = {
     'campaign': [('last_scraped', 'TEXT')],
+    'campaign_brand_map': [('company', 'TEXT'), ('brand', 'TEXT')],
     'campaign_brand_rating': RATING_FIELDS,
+    'campaign_category_map': [('category', 'TEXT')],
+    'campaign_company_map': [('company', 'TEXT')],
     'campaing_company_rating': RATING_FIELDS,
 }
 
@@ -251,3 +256,32 @@ def select_all_campaigns():
 
     return [clean_row(row) for row in
             db.execute('SELECT * FROM campaign ORDER BY campaign_id')]
+
+
+def select_all_categories():
+    db = open_db('campaigns')
+
+    return list(db.execute('SELECT campaign_id, category'
+                           ' FROM campaign_brand_category UNION '
+                           'SELECT campaign_id, category'
+                           ' FROM campaign_company_category'
+                           ' GROUP BY campaign_id, category'))
+
+
+def select_company_categories(campaign_id, company):
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute('SELECT * from campaign_company_category'
+                       ' WHERE campaign_id = ? AND company = ?',
+                       [campaign_id, company])]
+
+
+def select_brand_categories(campaign_id, company, brand):
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute('SELECT * from campaign_company_category'
+                       ' WHERE campaign_id = ? AND company = ?'
+                       ' AND brand = ?',
+                       [campaign_id, company, brand])]

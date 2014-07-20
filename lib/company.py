@@ -179,7 +179,7 @@ UNSTRIPPABLE_COMPANIES = {
 }
 
 
-def handle_matched_company(cd):
+def handle_matched_company(cd, category_map=None):
     """Take in a company dictionary from match_companies(), and
     output rows about that company to the database.
 

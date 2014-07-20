@@ -2,6 +2,7 @@ import logging
 from argparse import ArgumentParser
 from os import environ
 
+from lib.category import get_category_map
 from lib.company import match_companies
 from lib.company import name_company
 from lib.company import handle_matched_company
@@ -24,8 +25,20 @@ def main():
     # campaigns
     log.info('Outputting campaign table')
     for campaign_row in select_all_campaigns():
-        log.info(campaign_row['campaign_id'])
+        log.info(u'campaign: {}'.format(campaign_row['campaign_id']))
         output_row(campaign_row, 'campaign')
+
+    # category map
+    log.info('Outputting category_map table')
+    category_map = get_category_map()
+    map_rows = [
+        dict(campaign_id=campaign_id,
+             campaign_category=campaign_category,
+             category=category)
+        for (campaign_id, campaign_category), category in category_map.items()]
+    for map_row in sorted(map_rows, key=lambda mr: mr['category']):
+        log.info(u'category: {}'.format(map_row['category']))
+        output_row(map_row, 'campaign_category_map')
 
     log.info('Matching up companies')
     # handle in more-or-less alphabetical order

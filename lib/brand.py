@@ -20,7 +20,7 @@ from .norm import merge_dicts
 from .norm import norm_with_variants
 
 
-def get_brands_for_company(keys, company=None):
+def get_brands_for_company(keys):
     """Given keys, a list of (campaign_id, company), return a dictionary
     mapping canonical brand name to information about that brand."""
 
