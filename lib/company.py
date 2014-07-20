@@ -40,6 +40,12 @@ COMPANY_CORRECTIONS = {
     'Woolworths Australia': 'Woolworths Limited',
 }
 
+# Name changes. May eventually want separate logic for this.
+COMPANY_CORRECTIONS.update({
+    'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
+})
+
+
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
     ['Anheuser-Busch', 'Anheuser-Busch InBev'],
