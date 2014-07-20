@@ -19,6 +19,7 @@ import re
 from itertools import groupby
 
 from .brand import get_brands_for_company
+from .category import get_company_categories
 from .db import open_db
 from .db import output_row
 from .db import select_brand_ratings
@@ -179,7 +180,7 @@ UNSTRIPPABLE_COMPANIES = {
 }
 
 
-def handle_matched_company(cd, category_map=None):
+def handle_matched_company(cd, category_map):
     """Take in a company dictionary from match_companies(), and
     output rows about that company to the database.
 
@@ -212,8 +213,13 @@ def handle_matched_company(cd, category_map=None):
     # store company row
     output_row(company_row, 'company')
 
-    # store company map, rating
+    # store company categories, map, rating
     for campaign_id, campaign_company in cd['keys']:
+        # categories
+        for category_row in get_company_categories(
+                company_canonical, cd['keys'], category_map):
+            output_row(category_row, 'company_category')
+
         # map
         map_row = dict(
             campaign_id=campaign_id, campaign_company=campaign_company,

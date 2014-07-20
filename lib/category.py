@@ -27,7 +27,7 @@ from .norm import merge_dicts
 from .norm import simplify_whitespace
 
 
-BAD_CATEGORIES = ['', 'Other']
+BAD_CATEGORIES = ['Other']
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def fix_category(category):
     category = simplify_whitespace(category)
     category = titlecase(category)
 
-    if category in BAD_CATEGORIES:
+    if not category or category in BAD_CATEGORIES:
         return None
     else:
         return category
@@ -79,23 +79,18 @@ def get_company_categories(company, keys, category_map):
 
     for campaign_id, campaign_company in keys:
         for row in select_company_categories(campaign_id, campaign_company):
-            row['company'] = company
-
             category = category_map.get((campaign_id, row['category']))
             if not category:  # bad category like "Other"
                 continue
             row['category'] = category
 
-            del row['campaign_id']
-
             category_rows.append(row)
-
-    category_to_row = {}
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
-        category_row = merge_dicts(cr_group)
+        row = merge_dicts(cr_group)
 
-        category_to_row[category_row['category']] = category_row
+        row['company'] = company
+        del row['campaign_id']
 
-    return category_row
+        yield row

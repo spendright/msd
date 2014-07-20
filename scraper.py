@@ -21,6 +21,8 @@ def main():
     level = logging.INFO
     if opts.verbose or environ.get('MORPH_VERBOSE'):
         level = logging.DEBUG
+    elif opts.quiet:
+        level = logging.WARN
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
 
     # campaigns
@@ -41,7 +43,7 @@ def main():
 
     log.info('Outputting company data (all other tables)')
     for cd in cds:
-        handle_matched_company(cd)
+        handle_matched_company(cd, category_map)
 
     close_output_db()
 
@@ -51,6 +53,9 @@ def parse_args(args=None):
     parser.add_argument(
         '-v', '--verbose', dest='verbose', default=False, action='store_true',
         help='Enable debug logging')
+    parser.add_argument(
+        '-q', '--quiet', dest='quiet', default=False, action='store_true',
+        help='Turn off info logging')
 
     return parser.parse_args(args)
 
