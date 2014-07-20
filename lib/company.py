@@ -18,7 +18,7 @@ import logging
 import re
 from itertools import groupby
 
-from .brand import get_brand_to_row
+from .brand import get_brands_for_company
 from .db import open_db
 from .db import open_output_dump_truck
 from .db import select_campaign_company
@@ -182,7 +182,7 @@ def handle_matched_company(cd):
     dt = open_output_dump_truck()
 
     # get brands
-    brand_to_row = get_brand_to_row(cd['keys'])
+    brand_to_row = get_brands_for_company(cd['keys'])
 
     # pick a canonical name for this company
     short_name, full_name = name_company(cd, set(brand_to_row))

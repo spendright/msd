@@ -15,9 +15,12 @@
 #   limitations under the License.
 """Utilities for merging brand information."""
 from .db import select_campaign_brands
+from .norm import group_by_keys
+from .norm import merge_dicts
+from .norm import norm_with_variants
 
 
-def get_brand_to_row(keys):
+def get_brands_for_company(keys, company=None):
     """Given keys, a list of (campaign_id, company), return a dictionary
     mapping canonical brand name to information about that brand."""
 
@@ -28,17 +31,35 @@ def get_brand_to_row(keys):
 
     # We'll also need to catch when a brand has been rated but isn't
     # in the master list (include it but issue a warning)
+    brand_rows = []
+    for campaign_id, company in sorted(keys):
+        brand_rows.extend(select_campaign_brands(campaign_id, company))
+
+    def keyfunc(brand_row):
+        return norm_with_variants(brand_row['brand'])
+
     brand_to_row = {}
 
-    for campaign_id, company in sorted(keys):
-        brand_rows = select_campaign_brands(campaign_id, company)
-        for brand_row in brand_rows:
-            del brand_row['campaign_id']
-            brand = brand_row['brand']
+    for brand_row_group in group_by_keys(brand_rows, keyfunc):
+        # pick the version of the brand that is not all one case
+        # and is longest
+        brand = pick_brand_name(br['brand'] for br in brand_row_group)
 
-            if brand in brand_to_row:
-                brand_to_row[brand].update(brand_row)
-            else:
-                brand_to_row[brand] = brand_row
+        brand_row = merge_dicts(brand_row_group)
+
+        brand_row['brand'] = brand
+
+        del brand_row['campaign_id']
+
+        brand_to_row[brand] = brand_row
 
     return brand_to_row
+
+
+def pick_brand_name(variants):
+    """Given several versions of a brand name, prefer the one
+    that is not all-lowercase, not all-uppercase, longest,
+    and starts with a lowercase letter ("iPhone" > "IPhone")."""
+    return sorted(variants,
+        key=lambda v: (v != v.lower(), v != v.upper(), len(v), v),
+        reverse=True)[0]

@@ -1,26 +1,28 @@
-- use generalized matching for brands, categories, etc.
+- output category, campaigns, rating tables
 - improve brands list
-  - always include rated brands
-  - try not to use climate_counts if we can avoid it
-  - strip blank, "Other"
   - assume short name is also brand unless:
     - company name ends with group, enterprises, etc.
     - company name starts with a brand name (e.g. "Kraft Foods")
-    - master company data omits it
-    - if no brands, use short name!
+- flag brands that have have other brands from the same company as their prefix
+    (e.g. XPS, XPS 10; iPod, iPod nano)
+- integrate master company data
+- filter out incorrect brands
+  - try not to use climate_counts if we can avoid it
+  - always include rated brands
 - merge/capitalize categories
-- treat "International" as a company type
-
+  - strip blank, "Other"
+- represent subsidiary relationships
+- category hierarchy
 - match up orphaned brands to companies
 
 Corner cases (handle last):
-- BIS Global (DBA: CharityEngine) (use DBA name)
+-
 - Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
-- BBned / Tele2 Group (/-separated variants? subsidiaries?). Not A/S!
-- Subsidiaries (data structure)
--  flag brands that have other brands from the same campaign as their prefix
-    (e.g. XPS, XPS 10; iPod, iPod nano)
+- DBA:
+  - BIS Global (DBA: CharityEngine)
+  - Telecom Development Company Afghanistan Ltd. (Roshan)
 - Acronyms:
   - Associated British Foods (ABF)
+  - Doctor's Associates, Inc. (DAI).
   - HCA - Hospital Corporation of America
 - Freitag lab. ag -> Could just be "Freitag"
