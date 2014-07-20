@@ -217,7 +217,7 @@ def select_campaign_brands(campaign_id, company):
                 ' AND company = ?', [campaign_id, company])]
 
 
-def select_campaign_brand_ratings(campaign_id, company, brand):
+def select_brand_ratings(campaign_id, company, brand):
     db = open_db('campaigns')
 
     return [clean_row(row) for row in
@@ -234,6 +234,16 @@ def select_campaign_company(campaign_id, company):
         'SELECT * FROM campaign_company WHERE campaign_id = ?'
         ' AND company = ?', [campaign_id, company])
     return clean_row(cursor.fetchone())
+
+
+def select_company_ratings(campaign_id, company):
+    db = open_db('campaigns')
+
+    return [clean_row(row) for row in
+            db.execute(
+                'SELECT * FROM campaign_brand_rating WHERE campaign_id = ?'
+                ' AND company = ?',
+                [campaign_id, company])]
 
 
 def select_all_campaigns():

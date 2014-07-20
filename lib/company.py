@@ -21,6 +21,8 @@ from itertools import groupby
 from .brand import get_brands_for_company
 from .db import open_db
 from .db import output_row
+from .db import select_brand_ratings
+from .db import select_company_ratings
 from .db import select_campaign_company
 from .norm import group_by_keys
 from .norm import merge_dicts
@@ -204,12 +206,19 @@ def handle_matched_company(cd):
     # store company row
     output_row(company_row, 'company')
 
-    # store company map
+    # store company map, rating
     for campaign_id, campaign_company in cd['keys']:
-        company_map_row = dict(
+        # map
+        map_row = dict(
             campaign_id=campaign_id, campaign_company=campaign_company,
             company=company_canonical)
-        output_row(company_map_row, 'campaign_company_map')
+        output_row(map_row, 'campaign_company_map')
+
+        # ratings (may be more than one because of `scope`)
+        for rating_row in select_company_ratings(
+                campaign_id, campaign_company):
+            rating_row['company'] = company_canonical
+            output_row(rating_row, 'campaign_company_rating')
 
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
@@ -217,16 +226,24 @@ def handle_matched_company(cd):
         brand_row['company'] = company_canonical
         output_row(brand_row, 'brand')
 
-    # store brand map
+    # store brand map, rating
     campaign_to_company = dict(cd['keys'])
-    for (campaign_id, campaign_brand), brand_canonical in brand_map.iteritems():
+    for (campaign_id, campaign_brand), brand_canonical in brand_map.items():
         campaign_company = campaign_to_company[campaign_id]
-        brand_map_row = dict(
+
+        # map
+        map_row = dict(
             campaign_id=campaign_id, campaign_company=campaign_company,
             campaign_brand=campaign_brand, company=company_canonical,
             brand=brand_canonical)
-        output_row(brand_map_row, 'campaign_brand_map')
+        output_row(map_row, 'campaign_brand_map')
 
+        # ratings
+        for rating_row in select_brand_ratings(
+                campaign_id, campaign_company, campaign_brand):
+            rating_row['company'] = company_canonical
+            rating_row['brand'] = brand_canonical
+            output_row(rating_row, 'campaign_brand_rating')
 
 
 def name_company(cd, brands=()):
