@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from os import environ
 
 from lib.category import get_category_map
+from lib.category import output_category_rows
 from lib.company import match_companies
 from lib.company import name_company
 from lib.company import handle_matched_company
@@ -31,15 +32,9 @@ def main():
     # category map
     log.info('Outputting category_map table')
     category_map = get_category_map()
-    map_rows = [
-        dict(campaign_id=campaign_id,
-             campaign_category=campaign_category,
-             category=category)
-        for (campaign_id, campaign_category), category in category_map.items()]
-    for map_row in sorted(map_rows, key=lambda mr: mr['category']):
-        log.info(u'category: {}'.format(map_row['category']))
-        output_row(map_row, 'campaign_category_map')
+    output_category_rows(category_map)
 
+    # everything else
     log.info('Matching up companies')
     # handle in more-or-less alphabetical order
     cds = sorted(match_companies(), key=lambda cd: name_company(cd)[0])
