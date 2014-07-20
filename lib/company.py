@@ -20,7 +20,7 @@ from itertools import groupby
 
 from .brand import get_brands_for_company
 from .db import open_db
-from .db import open_output_dump_truck
+from .db import output_row
 from .db import select_campaign_company
 from .norm import group_by_keys
 from .norm import merge_dicts
@@ -179,13 +179,16 @@ def handle_matched_company(cd):
 
     (or will eventually)
     """
-    dt = open_output_dump_truck()
-
     # get brands
     brand_to_row = get_brands_for_company(cd['keys'])
 
     # pick a canonical name for this company
     short_name, full_name = name_company(cd, set(brand_to_row))
+
+    if short_name == full_name:
+        log.info(short_name)
+    else:
+        log.info(u'{} ({})'.format(short_name, full_name))
 
     # merge company rows
     company_row = {}
@@ -199,13 +202,13 @@ def handle_matched_company(cd):
     company_row['company_full'] = full_name
 
     # store company row
-    dt.upsert(company_row, 'company')
+    output_row(company_row, 'company')
 
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
     for brand_row in brand_rows:
         brand_row['company'] = short_name
-        dt.upsert(brand_row, 'brand')
+        output_row(brand_row, 'brand')
 
     # put brands into company row (for debugging)
     company_record = company_row

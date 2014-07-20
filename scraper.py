@@ -1,5 +1,6 @@
 import logging
 from argparse import ArgumentParser
+from os import environ
 
 from lib.company import match_companies
 from lib.company import name_company
@@ -13,18 +14,17 @@ log = logging.getLogger('scraper')
 def main():
     opts = parse_args()
 
-    level = logging.DEBUG if opts.verbose else logging.INFO
+    level = logging.INFO
+    if opts.verbose or environ.get('MORPH_VERBOSE'):
+        level = logging.DEBUG
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
 
     log.info('Matching up companies')
-    named_cds = sorted((name_company(cd)[0], cd) for cd in match_companies())
+    # handle in more-or-less alphabetical order
+    cds = sorted(match_companies(), key=lambda cd: name_company(cd)[0])
 
-    for name, cd in named_cds:
-        log.info(name)
-        company_record = handle_matched_company(cd)
-        if company_record['company'] != name:
-            log.info(u'  renamed to {}'.format(company_record['company']))
-        log.debug(repr(company_record))
+    for cd in cds:
+        handle_matched_company(cd)
 
     close_output_db()
 

@@ -46,8 +46,12 @@ TABLE_TO_KEY_FIELDS = {
     'brand_category': ['company', 'brand', 'category'],
     # info about a campaign's creator, etc.
     'campaign': ['campaign_id'],
+    # map from brand in campaign to canonical version
+    'campaign_brand_map': ['campaign_id', 'company', 'brand'],
     # should you buy this brand?
     'campaign_brand_rating': ['campaign_id', 'company', 'brand', 'scope'],
+    # map from company in campaign to canonical version
+    'campaign_company_map': ['campaign_id', 'company'],
     # should you buy from this company?
     'campaign_company_rating': ['campaign_id', 'company', 'scope'],
     # factual information about a company (e.g. url, email, etc.)
@@ -133,8 +137,11 @@ def open_output_db():
     If we haven't already opened it, initialize its tables."""
     if not hasattr(open_output_db, '_db'):
         if exists(OUTPUT_DB_TMP_FILENAME):
+            log.debug('Removing old version of {}'.format(
+                OUTPUT_DB_TMP_FILENAME))
             remove(OUTPUT_DB_TMP_FILENAME)
 
+        log.debug('Opening {}'.format(OUTPUT_DB_TMP_FILENAME))
         db = sqlite3.connect(OUTPUT_DB_TMP_FILENAME)
 
         # init tables
@@ -161,8 +168,19 @@ def open_output_dump_truck():
     return open_output_dump_truck._dump_truck
 
 
+def output_row(row, table):
+    row = clean_row(row)
+    log.debug('{}: {}'.format(table, repr(row)))
+
+    dt = open_output_dump_truck()
+    dt.upsert(row, table)
+
+
 def close_output_db():
     """Move output_db into place."""
+    log.debug('Closing {} and renaming to {}'.format(
+        OUTPUT_DB_TMP_FILENAME, OUTPUT_DB_FILENAME))
+
     open_output_db._db.close()
     if hasattr(open_output_db, '_db'):
         del open_output_db._db
