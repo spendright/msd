@@ -246,7 +246,7 @@ def select_company_ratings(campaign_id, company):
 
     return [clean_row(row) for row in
             db.execute(
-                'SELECT * FROM campaign_brand_rating WHERE campaign_id = ?'
+                'SELECT * FROM campaign_company_rating WHERE campaign_id = ?'
                 ' AND company = ?',
                 [campaign_id, company])]
 
