@@ -56,7 +56,7 @@ Here are some of the fields used in these tables:
  * date: The date a rating was published. This is in ISO format (YYYY-MM-DD), though in some cases we omit the day or even the month. A string, not a number!
  * goal: VERY compact description of campaign's goal. Five words max.
  * scope: Used to limit a rating to a particular subset of products (e.g. "Fair Trade"). You can have multiple ratings of the same brand/company with different scopes.
- * url: The canonical URL for a campaign, company, etc. Other `\*_url` fields are pretty common, for example `donate_url`.
+ * url: The canonical URL for a campaign, company, etc. Other `*_url` fields are pretty common, for example `donate_url`.
 
 The scrapers whose data we use are allowed to add other fields as needed
 (e.g. `twitter_handle`, `feedback_url`), so this list isn't comprehensive.
