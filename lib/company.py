@@ -47,7 +47,7 @@ COMPANY_CORRECTIONS = {
 COMPANY_CORRECTIONS.update({
     'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
     'RIM': 'BlackBerry Limited', # renamed in 2013
-    'Research in Motion': 'Blackberry Limited',
+    'Research In Motion': 'BlackBerry Limited',
 })
 
 
