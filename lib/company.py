@@ -46,20 +46,25 @@ COMPANY_CORRECTIONS = {
 # Name changes. May eventually want separate logic for this.
 COMPANY_CORRECTIONS.update({
     'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
+    'RIM': 'BlackBerry Limited', # renamed in 2013
+    'Research in Motion': 'Blackberry Limited',
 })
 
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
     ['Anheuser-Busch', 'Anheuser-Busch InBev'],
+    ['ASUS', 'ASUSTeK Computer'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['HP', 'Hewlett-Packard'],
+    ['HTC Electronics', 'HTC'],
     ['Illy', u'illycaffè'],
     ['JetBlue', 'JetBlue Airways'],
     ['Kellogg', "Kellogg's"],  # might solve this with a brand?
     ['Lidl', 'Lidl Stiftung'],
     ['LG', 'LGE', 'LG Electronics'],
     ['New Look', 'New Look Retailers'],
+    ['Philips', 'Royal Philips', 'Royal Philips Electronics'],
     ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
     # technically, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
     # the multinational. Not worrying about this now and I don't think this is

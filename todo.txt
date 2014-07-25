@@ -1,7 +1,8 @@
+- integrate master company data
 - add "parent_brand" field for brands that have have other brands from
   the same company as their prefix
     (e.g. XPS, XPS 10; iPod, iPod nano)
-- integrate master company data
+- infer brand ratings from company ratings & brand list, mark as such
 - filter out incorrect brands
   - try not to use climate_counts if we can avoid it
   - always include rated brands
