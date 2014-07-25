@@ -1,7 +1,3 @@
-- rework readme's so people are directed to everything scraper for data
-- assume short name is also brand unless:
-  - company name ends with group, enterprises, etc.
-  - company name starts with a brand name (e.g. "Kraft Foods")
 - add "parent_brand" field for brands that have have other brands from
   the same company as their prefix
     (e.g. XPS, XPS 10; iPod, iPod nano)
@@ -11,11 +7,12 @@
   - always include rated brands
 - represent subsidiary relationships
 - category hierarchy
-- match up orphaned brands to companies
+- match up orphaned brands to companies (e.g. Labor 411)
 
 Corner cases (handle last):
 -
-- Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
+- Country:
+  - Joey's Pizza Services (Deutschland) GmbH == Joey's Pizza Services
 - DBA:
   - BIS Global (DBA: CharityEngine)
   - Telecom Development Company Afghanistan Ltd. (Roshan)
