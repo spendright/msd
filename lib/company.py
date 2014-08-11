@@ -24,6 +24,7 @@ from .category import get_brand_categories
 from .category import get_company_categories
 from .db import open_db
 from .db import output_row
+from .db import select_all_companies
 from .db import select_brand_ratings
 from .db import select_company_ratings
 from .db import select_campaign_company
@@ -296,7 +297,7 @@ def name_company(cd, brands=()):
 def match_companies(companies_with_campaign_ids=None, aliases=None):
     """Match up similar company names.
 
-    companies -- sequence of (company, [campaign_ids]). Defaults to
+    companies -- sequence of (campaign_id, company). Defaults to
                  get_companies_with_campaign_ids()
     aliases -- sequence of list of matching company names. Defaults to
                COMPANY_ALIASES
@@ -307,7 +308,7 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
     matching_names -- set of names for matching
     """
     if companies_with_campaign_ids is None:
-        companies_with_campaign_ids = get_companies_with_campaign_ids()
+        companies_with_campaign_ids = select_all_companies()
     if aliases is None:
         aliases = COMPANY_ALIASES
 
@@ -320,10 +321,10 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
                          'matching_names': variants})
 
     # add in companies
-    for company, campaign_ids in companies_with_campaign_ids:
+    for campaign_id, company in companies_with_campaign_ids:
         if not company:  # skip blank company names
             continue
-        keys=set((campaign_id, company) for campaign_id in campaign_ids)
+        keys = {(campaign_id, company)}
         display, matching = get_company_name_variants(company)
 
         to_merge.append({'keys': keys, 'display_names': set(display),
@@ -429,14 +430,3 @@ def correct_company_type(c_type):
         return c_type[:-1]
     else:
         return c_type
-
-
-def get_companies_with_campaign_ids():
-    campaigns_db = open_db('campaigns')
-
-    cursor = campaigns_db.execute(
-        'SELECT company, campaign_id from campaign_company'
-        ' ORDER BY company')
-
-    for company, rows in groupby(cursor, key=lambda row: row['company']):
-        yield company, set(row['campaign_id'] for row in rows)

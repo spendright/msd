@@ -234,11 +234,16 @@ def select_brand_ratings(campaign_id, company, brand):
 
 
 def select_campaign_company(campaign_id, company):
-    db = open_db('campaigns')
+    if campaign_id == '':
+        db = open_db('companies')
+        cursor = db.execute(
+            'SELECT * FROM company WHERE company = ?', [company])
+    else:
+        db = open_db('campaigns')
+        cursor = db.execute(
+            'SELECT * FROM campaign_company WHERE campaign_id = ?'
+            ' AND company = ?', [campaign_id, company])
 
-    cursor = db.execute(
-        'SELECT * FROM campaign_company WHERE campaign_id = ?'
-        ' AND company = ?', [campaign_id, company])
     return clean_row(cursor.fetchone())
 
 
@@ -270,11 +275,23 @@ def select_all_categories():
         yield campaign_id, category
 
     companies_db = open_db('companies')
-    for category in companies_db.execute(
+    for row in companies_db.execute(
             'SELECT category FROM brand_category UNION '
             'SELECT category FROM company_category'
             ' GROUP BY category'):
-        yield '', category
+        yield '', row['category']
+
+
+
+def select_all_companies():
+    campaigns_db = open_db('campaigns')
+    for campaign_id, company in campaigns_db.execute(
+            'SELECT campaign_id, company from campaign_company'):
+        yield campaign_id, company
+
+    companies_db = open_db('companies')
+    for row in companies_db.execute('SELECT company from company'):
+        yield '', row['company']
 
 
 def select_company_categories(campaign_id, company):
