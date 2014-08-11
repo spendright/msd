@@ -114,6 +114,8 @@ def _map_categories(rows, campaign_id, category_map):
         yield row
 
 def _fix_category_row(row, company, brand=None):
+    del row['campaign_id']
+
     row['company'] = company
     if brand is not None:
         row['brand'] = brand

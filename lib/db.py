@@ -204,14 +204,11 @@ def clean_row(row):
     if row is None:
         return None
 
-    return dict((k, row[k]) for k in row.keys() if row[k] is not None)
+    row = dict((k, row[k]) for k in row.keys() if row[k] is not None)
 
-
-def strip_id_fields(row):
-    """Remove campaign_id and scraper_id fields from row."""
-    for k in 'campaign_id', 'scraper_id':
-        if k in row:
-            del row[k]
+    # TODO: kind of a hack to make company scrapers look like campaign scrapers
+    if 'scraper_id' in row:
+        row['campaign_id'] = COMPANIES_PREFIX + row.pop('scraper_id')
 
     return row
 
@@ -258,7 +255,7 @@ def select_company(campaign_id, company):
             'SELECT * FROM campaign_company WHERE campaign_id = ?'
             ' AND company = ?', [campaign_id, company])
 
-    return strip_id_fields(clean_row(cursor.fetchone()))
+    return clean_row(cursor.fetchone())
 
 
 def select_company_ratings(campaign_id, company):
@@ -323,7 +320,7 @@ def select_company_categories(campaign_id, company):
                             ' WHERE campaign_id = ? AND company = ?',
                             [campaign_id, company])
 
-    return [strip_id_fields(clean_row(row)) for row in cursor]
+    return [clean_row(row) for row in cursor]
 
 
 def select_brand_categories(campaign_id, company, brand):

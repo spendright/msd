@@ -213,6 +213,8 @@ def handle_matched_company(cd, category_map):
     for campaign_id, company in sorted(cd['keys']):
          company_row.update(select_company(campaign_id, company))
 
+    del company_row['campaign_id']  # should be at least one match
+
     company_row['company'] = company_canonical
     company_row['company_full'] = company_full
 
