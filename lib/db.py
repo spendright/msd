@@ -37,6 +37,8 @@ CHUNK_SIZE = 1024
 OUTPUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
 OUTPUT_DB_FILENAME = 'data.sqlite'
 
+# used to indicate that a "campaign ID" actually refers to a company scraper
+COMPANIES_PREFIX = 'companies:'
 
 # map from table name to fields used for the primary key (not including
 # campaign_id). All key fields are currently TEXT
@@ -205,6 +207,15 @@ def clean_row(row):
     return dict((k, row[k]) for k in row.keys() if row[k] is not None)
 
 
+def strip_id_fields(row):
+    """Remove campaign_id and scraper_id fields from row."""
+    for k in 'campaign_id', 'scraper_id':
+        if k in row:
+            del row[k]
+
+    return row
+
+
 def select_campaign_brand(campaign_id, company, brand):
     db = open_db('campaigns')
 
@@ -234,17 +245,20 @@ def select_brand_ratings(campaign_id, company, brand):
 
 
 def select_campaign_company(campaign_id, company):
-    if campaign_id == '':
+    if campaign_id.startswith(COMPANIES_PREFIX):
+        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
+
         db = open_db('companies')
         cursor = db.execute(
-            'SELECT * FROM company WHERE company = ?', [company])
+            'SELECT * FROM company WHERE scraper_id = ?'
+            ' AND company = ?', [scraper_id, company])
     else:
         db = open_db('campaigns')
         cursor = db.execute(
             'SELECT * FROM campaign_company WHERE campaign_id = ?'
             ' AND company = ?', [campaign_id, company])
 
-    return clean_row(cursor.fetchone())
+    return strip_id_fields(clean_row(cursor.fetchone()))
 
 
 def select_company_ratings(campaign_id, company):
@@ -275,11 +289,11 @@ def select_all_categories():
         yield campaign_id, category
 
     companies_db = open_db('companies')
-    for row in companies_db.execute(
-            'SELECT category FROM brand_category UNION '
-            'SELECT category FROM company_category'
+    for scraper_id, category in companies_db.execute(
+            'SELECT scraper_id, category FROM brand_category UNION '
+            'SELECT scraper_id, category FROM company_category'
             ' GROUP BY category'):
-        yield '', row['category']
+        yield COMPANIES_PREFIX + scraper_id, category
 
 
 
@@ -290,8 +304,9 @@ def select_all_companies():
         yield campaign_id, company
 
     companies_db = open_db('companies')
-    for row in companies_db.execute('SELECT company from company'):
-        yield '', row['company']
+    for scraper_id, company in companies_db.execute(
+            'SELECT scraper_id, company from company'):
+        yield COMPANIES_PREFIX + scraper_id, company
 
 
 def select_company_categories(campaign_id, company):
