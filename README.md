@@ -80,6 +80,22 @@ the `judgment` field is for:
  * judgment: 1 for "support", -1 for "avoid" and 0 for something in between ("consider")
 
 
+Flag fields
+-----------
+
+The main use case for this is to match consumer products, so it's helpful
+to know if a brand applies to a service, prescription only, or only marketed
+to other businesses. We use flags like `is_prescription` to call out
+edge cases like this. For example:
+
+ * `is_licensed': set to 1 if licensed from another company
+ * `is_service`: set to 1 if a service, not a product (e.g. Airlines)
+ * `is_prescription`: set to 1 if prescription-only
+ * `is_b2b`: set to 1 if primarly marketed to other businesses (e.g. pesticide)
+
+
+
+
 Using the Data
 --------------
 
