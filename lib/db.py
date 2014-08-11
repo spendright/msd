@@ -29,6 +29,7 @@ from urllib2 import urlopen
 
 DB_TO_URL = {
     'campaigns': 'https://morph.io/spendright-scrapers/campaigns/data.sqlite',
+    'companies': 'https://morph.io/spendright-scrapers/companies/data.sqlite',
 }
 
 CHUNK_SIZE = 1024
@@ -259,13 +260,21 @@ def select_all_campaigns():
 
 
 def select_all_categories():
-    db = open_db('campaigns')
+    campaigns_db = open_db('campaigns')
+    for campaign_id, category in campaigns_db.execute(
+            'SELECT campaign_id, category'
+            ' FROM campaign_brand_category UNION '
+            'SELECT campaign_id, category'
+            ' FROM campaign_company_category'
+            ' GROUP BY campaign_id, category'):
+        yield campaign_id, category
 
-    return list(db.execute('SELECT campaign_id, category'
-                           ' FROM campaign_brand_category UNION '
-                           'SELECT campaign_id, category'
-                           ' FROM campaign_company_category'
-                           ' GROUP BY campaign_id, category'))
+    companies_db = open_db('companies')
+    for category in companies_db.execute(
+            'SELECT category FROM brand_category UNION '
+            'SELECT category FROM company_category'
+            ' GROUP BY category'):
+        yield '', category
 
 
 def select_company_categories(campaign_id, company):
