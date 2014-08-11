@@ -27,7 +27,7 @@ from .db import output_row
 from .db import select_all_companies
 from .db import select_brand_ratings
 from .db import select_company_ratings
-from .db import select_campaign_company
+from .db import select_company
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
@@ -211,7 +211,7 @@ def handle_matched_company(cd, category_map):
     company_row = {}
 
     for campaign_id, company in sorted(cd['keys']):
-         company_row.update(select_campaign_company(campaign_id, company))
+         company_row.update(select_company(campaign_id, company))
 
     company_row['company'] = company_canonical
     company_row['company_full'] = company_full
@@ -219,7 +219,7 @@ def handle_matched_company(cd, category_map):
     # store company row
     output_row(company_row, 'company')
 
-    # store company categories, map, rating
+    # store company map and ratings
     for campaign_id, campaign_company in cd['keys']:
         # map
         map_row = dict(
