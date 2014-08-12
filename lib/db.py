@@ -213,22 +213,21 @@ def clean_row(row):
     return row
 
 
-def select_campaign_brand(campaign_id, company, brand):
-    db = open_db('campaigns')
+def select_brands(campaign_id, company):
+    if campaign_id.startswith(COMPANIES_PREFIX):
+        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
 
-    cursor = db.execute(
-        'SELECT * FROM campaign_brand WHERE campaign_id = ?'
-        ' AND company = ? AND brand = ?', [campaign_id, company, brand])
-    return clean_row(cursor.fetchone())
+        db = open_db('companies')
+        cursor = db.execute(
+            'SELECT * FROM brand WHERE scraper_id = ?'
+            ' AND company = ?', [scraper_id, company])
+    else:
+        db = open_db('campaigns')
+        cursor = db.execute(
+            'SELECT * FROM campaign_brand WHERE campaign_id = ?'
+            ' AND company = ?', [campaign_id, company])
 
-
-def select_campaign_brands(campaign_id, company):
-    db = open_db('campaigns')
-
-    return [clean_row(row) for row in
-            db.execute(
-                'SELECT * FROM campaign_brand WHERE campaign_id = ?'
-                ' AND company = ?', [campaign_id, company])]
+    return [clean_row(row) for row in cursor]
 
 
 def select_brand_ratings(campaign_id, company, brand):

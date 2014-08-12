@@ -17,12 +17,11 @@
 import logging
 import re
 from collections import defaultdict
-from itertools import groupby
 
 from .brand import get_brands_for_company
 from .category import get_brand_categories
 from .category import get_company_categories
-from .db import open_db
+from .db import COMPANIES_PREFIX
 from .db import output_row
 from .db import select_all_companies
 from .db import select_brand_ratings

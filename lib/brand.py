@@ -14,7 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """Utilities for merging brand information."""
-from .db import select_campaign_brands
+from .db import select_brands
+from .db import COMPANIES_PREFIX
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
@@ -33,17 +34,25 @@ def get_brands_for_company(keys):
     # in the master list (include it but issue a warning)
     brand_rows = []
     for campaign_id, company in sorted(keys):
-        brand_rows.extend(select_campaign_brands(campaign_id, company))
+        brand_rows.extend(select_brands(campaign_id, company))
 
     def keyfunc(brand_row):
         return norm_with_variants(brand_row['brand'])
 
+    company_scrapers = set()
+    company_scraper_brands = set()
     brand_to_row = {}
     brand_map = {}
 
     for brand_row_group in group_by_keys(brand_rows, keyfunc):
-        # pick the version of the brand that is not all one case
-        # and is longest
+        # does any of this come from a company scraper?
+        brand_company_scrapers = set(
+            br['campaign_id'][len(COMPANIES_PREFIX):]
+            for br in brand_row_group
+            if br['campaign_id'].startswith(COMPANIES_PREFIX))
+
+        # don't give special priority to brands from company scrapers;
+        # these are sometimes ALL CAPS
         brand = pick_brand_name(br['brand'] for br in brand_row_group)
 
         # update mapping
@@ -55,6 +64,19 @@ def get_brands_for_company(keys):
         del brand_row['campaign_id']
 
         brand_to_row[brand] = brand_row
+
+        company_scraper_brands.add(brand)
+        company_scrapers.update(brand_company_scrapers)
+
+    # check if there are any brands that are mentioned by campaigns
+    # but not company scrapers. Sometimes campaigns include brands
+    # from other companies by mistake
+    if company_scraper_brands:
+        extra_brands = set(brand_to_row) - company_scraper_brands
+        if extra_brands:
+            log.warn(u'Extra brand(s) {} not mentioned by company scrapers'
+                     ' ({})'.format(', '.join(sorted(extra_brands)),
+                                    ', '.join(sorted(company_scraper_brands))))
 
     return brand_to_row, brand_map
 
