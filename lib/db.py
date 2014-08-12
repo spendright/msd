@@ -231,6 +231,9 @@ def select_brands(campaign_id, company):
 
 
 def select_brand_ratings(campaign_id, company, brand):
+    if campaign_id.startswith(COMPANIES_PREFIX):
+        return []
+
     db = open_db('campaigns')
 
     return [clean_row(row) for row in
@@ -258,6 +261,9 @@ def select_company(campaign_id, company):
 
 
 def select_company_ratings(campaign_id, company):
+    if campaign_id.startswith(COMPANIES_PREFIX):
+        return []
+
     db = open_db('campaigns')
 
     return [clean_row(row) for row in
@@ -323,10 +329,19 @@ def select_company_categories(campaign_id, company):
 
 
 def select_brand_categories(campaign_id, company, brand):
-    db = open_db('campaigns')
+    if campaign_id.startswith(COMPANIES_PREFIX):
+        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
 
-    return [clean_row(row) for row in
-            db.execute('SELECT * from campaign_brand_category'
-                       ' WHERE campaign_id = ? AND company = ?'
-                       ' AND brand = ?',
-                       [campaign_id, company, brand])]
+        db = open_db('companies')
+        cursor = db.execute('SELECT * from brand_category'
+                            ' WHERE scraper_id = ? AND company = ?'
+                            ' AND brand = ?',
+                            [scraper_id, company, brand])
+    else:
+        db = open_db('campaigns')
+        cursor = db.execute('SELECT * from campaign_brand_category'
+                            ' WHERE campaign_id = ? AND company = ?'
+                            ' AND brand = ?',
+                            [campaign_id, company, brand])
+
+    return [clean_row(row) for row in cursor]

@@ -269,6 +269,7 @@ def handle_matched_company(cd, category_map):
             rating_row['brand'] = brand_canonical
             output_row(rating_row, 'campaign_brand_rating')
 
+    # store brand categories
     for brand_canonical, keys in sorted(brand_to_keys.items()):
         for cat_row in get_brand_categories(
                 company_canonical, brand_canonical, keys, category_map):
