@@ -56,6 +56,7 @@ COMPANY_ALIASES = [
     ['Anheuser-Busch', 'Anheuser-Busch InBev'],
     ['ASUS', 'ASUSTeK Computer'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
+    ['Gap', 'The Gap'],  # might solve this with "Gap" brand?
     ['HP', 'Hewlett-Packard'],
     ['HTC Electronics', 'HTC'],
     ['Illy', u'illycaffè'],
