@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 COMPANY_CORRECTIONS = {
     'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
+    'PUMA AG Rudolf Dassler Sport': 'Puma SE',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
     'Woolworths Australia': 'Woolworths Limited',
