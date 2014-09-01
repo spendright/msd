@@ -38,6 +38,9 @@ def fix_category(category):
     category = simplify_whitespace(category)
     category = titlecase(category)
 
+    if category.endswith(' Brands'):
+        category = category[:-7]
+
     if not category or category in BAD_CATEGORIES:
         return None
     else:
