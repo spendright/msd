@@ -24,6 +24,16 @@ CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
 # use to remove excess whitespace
 WHITESPACE_RE = re.compile(r'\s+')
 
+BAD_CHAR_REPLACEMENTS = [
+    (u'\u2019', "'"),
+]
+
+
+def fix_bad_chars(s):
+    for bad, good in BAD_CHAR_REPLACEMENTS:
+        s = s.replace(bad, good)
+    return s
+
 
 def group_by_keys(items, keyfunc):
     key_to_group = {}

@@ -16,6 +16,7 @@
 """Utilities for merging brand information."""
 from .db import select_brands
 from .db import COMPANIES_PREFIX
+from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
@@ -27,13 +28,14 @@ BRAND_CORRECTIONS = {
 }
 
 
-def fix_brand_row(row):
+def extract_brand(row):
+    brand = row['brand']
+
     correction = BRAND_CORRECTIONS.get((row['campaign_id'], row['brand']))
     if correction:
-        row = row.copy()
-        row['brand'] = correction
+        brand = correction
 
-    return row
+    return fix_bad_chars(brand)
 
 
 def get_brands_for_company(keys):
@@ -49,8 +51,7 @@ def get_brands_for_company(keys):
     # in the master list (include it but issue a warning)
     brand_rows = []
     for campaign_id, company in sorted(keys):
-        for brand_row in select_brands(campaign_id, company):
-            brand_rows.append(fix_brand_row(brand_row))
+        brand_rows.extend(select_brands(campaign_id, company))
 
     def keyfunc(brand_row):
         return norm_with_variants(brand_row['brand'])
@@ -69,7 +70,7 @@ def get_brands_for_company(keys):
 
         # don't give special priority to brands from company scrapers;
         # these are sometimes ALL CAPS
-        brand = pick_brand_name(br['brand'] for br in brand_row_group)
+        brand = pick_brand_name(extract_brand(br) for br in brand_row_group)
 
         # update mapping
         for br in brand_row_group:

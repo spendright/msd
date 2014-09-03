@@ -27,6 +27,7 @@ from .db import select_all_companies
 from .db import select_brand_ratings
 from .db import select_company_ratings
 from .db import select_company
+from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
@@ -367,6 +368,7 @@ def get_company_name_variants(company):
     """Convert a company name to a set of variants for display,
     and a set of variants for matching only.
     """
+    company = fix_bad_chars(company)
 
     display_variants = set()  # usable as display name
     matching_variants = set()  # usable for matching

@@ -23,6 +23,7 @@ from .db import output_row
 from .db import select_all_categories
 from .db import select_brand_categories
 from .db import select_company_categories
+from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import simplify_whitespace
@@ -42,6 +43,7 @@ def fix_category(category, campaign_id):
     if (campaign_id, category) in CATEGORY_CORRECTIONS:
         category = CATEGORY_CORRECTIONS[(campaign_id, category)]
 
+    category = fix_bad_chars(category)
     category = category.replace('&', ' and ')
     category = simplify_whitespace(category)
     category = titlecase(category)
