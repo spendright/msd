@@ -30,10 +30,18 @@ from .norm import simplify_whitespace
 
 BAD_CATEGORIES = ['Other']
 
+CATEGORY_CORRECTIONS = {
+    ('rankabrand', 'Luxury brands'): 'Luxury Apparel',
+    ('rankabrand', 'Premium brands'): 'Premium Apparel',
+}
+
 log = logging.getLogger(__name__)
 
 
-def fix_category(category):
+def fix_category(category, campaign_id):
+    if (campaign_id, category) in CATEGORY_CORRECTIONS:
+        category = CATEGORY_CORRECTIONS[(campaign_id, category)]
+
     category = category.replace('&', ' and ')
     category = simplify_whitespace(category)
     category = titlecase(category)
@@ -51,7 +59,7 @@ def get_category_map():
     key_to_category = {}
 
     for campaign_id, campaign_category in select_all_categories():
-        category = fix_category(campaign_category)
+        category = fix_category(campaign_category, campaign_id)
         if category is None:
             continue
 
