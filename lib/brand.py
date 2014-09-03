@@ -25,20 +25,17 @@ from .norm import norm_with_variants
 
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
-    ('free2work', 'Taylormade - Adidas Golf'): 'Taylormade',
+    'Taylormade - Adidas Golf': 'Taylormade',
 }
 
 log = logging.getLogger(__name__)
 
 
-def extract_brand(row):
-    brand = row['brand']
+def fix_brand(brand):
+    brand = BRAND_CORRECTIONS.get(brand) or brand
+    brand = fix_bad_chars(brand)
 
-    correction = BRAND_CORRECTIONS.get((row['campaign_id'], row['brand']))
-    if correction:
-        brand = correction
-
-    return fix_bad_chars(brand)
+    return brand
 
 
 def get_brands_for_company(keys):
@@ -73,7 +70,7 @@ def get_brands_for_company(keys):
 
         # don't give special priority to brands from company scrapers;
         # these are sometimes ALL CAPS
-        brand = pick_brand_name(extract_brand(br) for br in brand_row_group)
+        brand = pick_brand_name(br['brand'] for br in brand_row_group)
 
         # update mapping
         for br in brand_row_group:
@@ -114,4 +111,7 @@ def pick_brand_name(variants):
                 v[0],
                 sum(1 for c in v if c.upper() == c))
 
-    return sorted(variants, key=keyfunc, reverse=True)[0]
+    variants = [fix_brand(v) for v in variants]
+    variants.sort(key=keyfunc, reverse=True)
+
+    return variants[0]
