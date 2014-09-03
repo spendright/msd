@@ -21,6 +21,21 @@ from .norm import merge_dicts
 from .norm import norm_with_variants
 
 
+BRAND_CORRECTIONS = {
+    # this is actually the name of a subsidary
+    ('free2work', 'Taylormade - Adidas Golf'): 'Taylormade',
+}
+
+
+def fix_brand_row(row):
+    correction = BRAND_CORRECTIONS.get((row['campaign_id'], row['brand']))
+    if correction:
+        row = row.copy()
+        row['brand'] = correction
+
+    return row
+
+
 def get_brands_for_company(keys):
     """Given keys, a list of (campaign_id, company), return a dictionary
     mapping canonical brand name to information about that brand."""
@@ -34,7 +49,8 @@ def get_brands_for_company(keys):
     # in the master list (include it but issue a warning)
     brand_rows = []
     for campaign_id, company in sorted(keys):
-        brand_rows.extend(select_brands(campaign_id, company))
+        for brand_row in select_brands(campaign_id, company):
+            brand_rows.append(fix_brand_row(brand_row))
 
     def keyfunc(brand_row):
         return norm_with_variants(brand_row['brand'])
@@ -84,7 +100,14 @@ def get_brands_for_company(keys):
 def pick_brand_name(variants):
     """Given several versions of a brand name, prefer the one
     that is not all-lowercase, not all-uppercase, longest,
-    and starts with a lowercase letter ("iPhone" > "IPhone")."""
-    return sorted(variants,
-        key=lambda v: (v != v.lower(), v != v.upper(), len(v), v),
-        reverse=True)[0]
+    and starts with a lowercase letter ("iPhone" > "IPhone"),
+    and has the most capital letters ("BlackBerry" > "Blackberry").
+    """
+    def keyfunc(v):
+        return (v != v.lower(),
+                v != v.upper(),
+                len(v),
+                v[0],
+                sum(1 for c in v if c.upper() == c))
+
+    return sorted(variants, key=keyfunc, reverse=True)[0]
