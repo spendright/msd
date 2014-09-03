@@ -21,7 +21,6 @@ from collections import defaultdict
 from .brand import get_brands_for_company
 from .category import get_brand_categories
 from .category import get_company_categories
-from .db import COMPANIES_PREFIX
 from .db import output_row
 from .db import select_all_companies
 from .db import select_brand_ratings
@@ -285,12 +284,18 @@ def name_company(cd, brands=()):
 
     # if matching short name is shorter and matches a brand for one
     # of the companies, use that
-    matching_short_name = pick_short_name_from_variants(
-        cd['display_names'] | cd['matching_names'])
+    if brands:
+        matching_short_name = pick_short_name_from_variants(
+            cd['display_names'] | cd['matching_names'])
 
-    if (matching_short_name != short_name and
-        matching_short_name in brands):
-        short_name = matching_short_name
+        if matching_short_name != short_name:
+            # use normed variants so that e.g. "ASICS" matches "Asics"
+            msn_nvs = norm_with_variants(matching_short_name)
+            brand_nvs = set(v for brand in brands
+                                 for v in norm_with_variants(brand))
+
+            if msn_nvs & brand_nvs:
+                short_name = matching_short_name
 
     full_name = pick_full_name_from_variants(cd['display_names'])
 

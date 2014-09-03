@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """Utilities for merging brand information."""
+import logging
+
 from .db import select_brands
 from .db import COMPANIES_PREFIX
 from .norm import fix_bad_chars
@@ -21,11 +23,12 @@ from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
 
-
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
     ('free2work', 'Taylormade - Adidas Golf'): 'Taylormade',
 }
+
+log = logging.getLogger(__name__)
 
 
 def extract_brand(row):
