@@ -46,6 +46,8 @@ COMPANY_CORRECTIONS = {
 
 # Name changes. May eventually want separate logic for this.
 COMPANY_CORRECTIONS.update({
+    'Limited Brands': 'L Brands',
+    'Limited Brands, Inc.': 'L Brands Inc.',
     'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
     'RIM': 'BlackBerry Limited', # renamed in 2013
     'Research In Motion': 'BlackBerry Limited',
@@ -63,8 +65,10 @@ COMPANY_ALIASES = [
     ['Illy', u'illycaffè'],
     ['JetBlue', 'JetBlue Airways'],
     ['Kellogg', "Kellogg's"],  # might solve this with a brand?
+    ['L Brands', 'Limited Brands'],
     ['Lidl', 'Lidl Stiftung'],
     ['LG', 'LGE', 'LG Electronics'],
+    ['Merck', 'Schering-Plough'],  # merged into Merck
     ['New Look', 'New Look Retailers'],
     ['Philips', 'Royal Philips', 'Royal Philips Electronics'],
     ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
@@ -333,6 +337,7 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
         if not company:  # skip blank company names
             continue
         keys = {(campaign_id, company)}
+
         display, matching = get_company_name_variants(company)
 
         to_merge.append({'keys': keys, 'display_names': set(display),
@@ -420,6 +425,10 @@ def get_company_name_variants(company):
             return
 
     handle(company)
+
+    # don't allow single-character names
+    display_variants = set(dv for dv in display_variants if len(dv) > 1)
+    matching_variants = set(mv for mv in matching_variants if len(mv) > 1)
 
     matching_variants.update(display_variants)
 

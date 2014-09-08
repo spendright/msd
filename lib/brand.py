@@ -28,6 +28,27 @@ BRAND_CORRECTIONS = {
     'Taylormade - Adidas Golf': 'Taylormade',
 }
 
+# incorrect brand information for particular campaigns
+# this maps campaign_id to company name in that campaign
+IGNORE_BRANDS = {
+    'climate_counts': {
+        'Baxter International': None,
+        'Britax': None,
+        'Clorox': None,
+        'Coca-Cola Company': None,
+        'ConAgra Foods': None,
+        'ExpressJet': None,
+        'General Mills': None,
+        'Groupe Danone': {'LU'},  # sold in 2007
+        'Hillshire': None,
+        'Kraft Foods': None,
+        'News Corporation': None,  # recently split
+        'Sony': None,
+        'eBay': {'GE'},  # ???
+    }
+}
+
+
 log = logging.getLogger(__name__)
 
 
@@ -51,7 +72,19 @@ def get_brands_for_company(keys):
     # in the master list (include it but issue a warning)
     brand_rows = []
     for campaign_id, company in sorted(keys):
-        brand_rows.extend(select_brands(campaign_id, company))
+        if (campaign_id in IGNORE_BRANDS and
+            company in IGNORE_BRANDS[campaign_id]):
+
+            if IGNORE_BRANDS[campaign_id][company] is None:
+                continue  # None means exclude all brands
+            else:
+                ignore = IGNORE_BRANDS[campaign_id][company]
+        else:
+            ignore = ()
+
+        for brand_row in select_brands(campaign_id, company):
+            if brand_row['brand'] not in ignore:
+                brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
         return norm_with_variants(brand_row['brand'])
