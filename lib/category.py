@@ -29,8 +29,13 @@ from .norm import merge_dicts
 from .norm import simplify_whitespace
 
 
-BAD_CATEGORIES = ['Other']
+BAD_CATEGORIES = {
+    'Commercial Products',
+    'Industry Innovators',
+    'Other',
+}
 
+# TODO: push this into rankabrand scraper
 CATEGORY_CORRECTIONS = {
     ('rankabrand', 'Luxury brands'): 'Luxury Apparel',
     ('rankabrand', 'Premium brands'): 'Premium Apparel',
