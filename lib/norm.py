@@ -25,6 +25,7 @@ CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
 WHITESPACE_RE = re.compile(r'\s+')
 
 BAD_CHAR_REPLACEMENTS = [
+    (u'\xa0', ' '),  # &nbsp;
     (u'\u2019', "'"),
 ]
 
