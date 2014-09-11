@@ -42,6 +42,7 @@ IGNORE_BRANDS = {
         'Groupe Danone': {'LU'},  # sold in 2007
         'Hillshire': None,
         'Kraft Foods': None,
+        'Liz Claiborne': None,  # sold most brands, now Kate Spade & Company
         'News Corporation': None,  # recently split
         'Sony': None,
         'eBay': {'GE'},  # ???

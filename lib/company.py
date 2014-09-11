@@ -48,6 +48,7 @@ COMPANY_CORRECTIONS = {
 COMPANY_CORRECTIONS.update({
     'Limited Brands': 'L Brands',
     'Limited Brands, Inc.': 'L Brands Inc.',
+    'Liz Claiborne': 'Kate Spade & Company',
     'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
     'RIM': 'BlackBerry Limited', # renamed in 2013
     'Research In Motion': 'BlackBerry Limited',
