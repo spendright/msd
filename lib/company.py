@@ -147,9 +147,8 @@ COMPANY_TYPE_RE = re.compile(
     r'|PBC'  # "Public Benefit Corporation"? Only on B Corp site
     r'|PLC'
     r'|P\.C\.'
-    r'|P\.C\.'
-    r'|Pty Ltd'
-    r'|Pty'
+    r'|Pty\.? Ltd\.?'
+    r'|Pty\.?'
     r'|S.\L\.'
     r'|SA'
     r'|SAPI DE CV SOFOM ENR'
@@ -163,8 +162,8 @@ COMPANY_TYPE_RE = re.compile(
     r'|SpA'
     r'|b\.v\.'
     r'|gmbh'
-    r'|inc'
-    r'|plc'
+    r'|inc\.?'
+    r'|plc\.?'
     r')(?P<intl2> International)?$'
 )
 
