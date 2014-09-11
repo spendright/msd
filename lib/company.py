@@ -54,6 +54,9 @@ COMPANY_CORRECTIONS.update({
     'Research In Motion': 'BlackBerry Limited',
 })
 
+DEFUNCT_COMPANIES = {
+    'Armor Holdings',  # acquired by BAE Systems in 2007, integrated
+}
 
 COMPANY_ALIASES = [
     ['AB Electrolux', 'Electrolux'],
@@ -201,6 +204,10 @@ def handle_matched_company(cd, category_map):
 
     (or will eventually)
     """
+    # TODO: add is_defunct flag instead
+    if DEFUNCT_COMPANIES & (cd['display_names'] | cd['matching names']):
+        return
+
     # get brands
     brand_to_row, brand_map = get_brands_for_company(cd['keys'])
 
