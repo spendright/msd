@@ -46,7 +46,15 @@ IGNORE_BRANDS = {
         'News Corporation': None,  # recently split
         'Sony': None,
         'eBay': {'GE'},  # ???
-    }
+    },
+    'free2work': {
+        'Bob Barker Company': {  # makes prison supplies
+            'Comfort Zone',
+            'Liberty',  # heh
+            'MacGregor',
+            'Tristich'
+        },
+    },
 }
 
 
