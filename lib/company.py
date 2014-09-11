@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 COMPANY_CORRECTIONS = {
     'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
+    'Nescafe': u'Nestlé',  # Nescafé is a brand, not a company
     'PUMA AG Rudolf Dassler Sport': 'Puma SE',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
@@ -205,7 +206,7 @@ def handle_matched_company(cd, category_map):
     (or will eventually)
     """
     # TODO: add is_defunct flag instead
-    if DEFUNCT_COMPANIES & (cd['display_names'] | cd['matching names']):
+    if DEFUNCT_COMPANIES & (cd['display_names'] | cd['matching_names']):
         return
 
     # get brands
