@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 COMPANY_CORRECTIONS = {
     'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
+    'Hanesbrands Incorporated': 'Hanesbrands Inc.',
     'Nescafe': u'Nestlé',  # Nescafé is a brand, not a company
     'PUMA AG Rudolf Dassler Sport': 'Puma SE',
     'V.F. Corporation': 'VF Corporation',
@@ -47,6 +48,7 @@ COMPANY_CORRECTIONS = {
 
 # Name changes. May eventually want separate logic for this.
 COMPANY_CORRECTIONS.update({
+    'Clean Clothes, Inc.': "Maggie's Functional Organics",
     'Limited Brands': 'L Brands',
     'Limited Brands, Inc.': 'L Brands Inc.',
     'Liz Claiborne': 'Kate Spade & Company',
@@ -57,6 +59,8 @@ COMPANY_CORRECTIONS.update({
 
 DEFUNCT_COMPANIES = {
     'Armor Holdings',  # acquired by BAE Systems in 2007, integrated
+    'Jones Apparel Group',  # acquired by Nine West Inc.
+    'The Jones Group',  # another name for Jones Apparel Group
 }
 
 COMPANY_ALIASES = [

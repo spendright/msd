@@ -111,10 +111,12 @@ def get_brand_categories(company, brand, keys, category_map):
     category_rows = []
 
     for campaign_id, campaign_company, campaign_brand in keys:
+
+        brand_category_rows = select_brand_categories(
+            campaign_id, campaign_company, campaign_brand)
+
         category_rows.extend(_map_categories(
-            select_brand_categories(
-                campaign_id, campaign_company, campaign_brand),
-            campaign_id, category_map))
+            brand_category_rows, campaign_id, category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):

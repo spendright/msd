@@ -54,6 +54,7 @@ IGNORE_BRANDS = {
             'MacGregor',
             'Tristich'
         },
+        'Hanesbrands Incorporated': None,  # use scraper
     },
 }
 
