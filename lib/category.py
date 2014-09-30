@@ -17,7 +17,7 @@
 import logging
 from collections import defaultdict
 
-from .vendor.titlecase import titlecase
+from titlecase import titlecase
 
 from .db import output_row
 from .db import select_all_categories
