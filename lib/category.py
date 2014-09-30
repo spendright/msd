@@ -35,19 +35,10 @@ BAD_CATEGORIES = {
     'Other',
 }
 
-# TODO: push this into rankabrand scraper
-CATEGORY_CORRECTIONS = {
-    ('rankabrand', 'Luxury brands'): 'Luxury Apparel',
-    ('rankabrand', 'Premium brands'): 'Premium Apparel',
-}
-
 log = logging.getLogger(__name__)
 
 
 def fix_category(category, campaign_id):
-    if (campaign_id, category) in CATEGORY_CORRECTIONS:
-        category = CATEGORY_CORRECTIONS[(campaign_id, category)]
-
     category = fix_bad_chars(category)
     category = category.replace('&', ' and ')
     category = simplify_whitespace(category)
