@@ -26,6 +26,10 @@ from tempfile import NamedTemporaryFile
 from urllib import urlencode
 from urllib2 import urlopen
 
+from srs.db import TABLE_TO_KEY_FIELDS
+from srs.db import create_table_if_not_exists
+from srs.db import show_tables
+
 
 DB_TO_URL = {
     'campaigns': 'https://morph.io/spendright-scrapers/campaigns/data.sqlite',
@@ -34,71 +38,42 @@ DB_TO_URL = {
 
 CHUNK_SIZE = 1024
 
+MERGED_DB_FILENAME = 'merged.sqlite'
 OUTPUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
 OUTPUT_DB_FILENAME = 'data.sqlite'
 
 # used to indicate that a "campaign ID" actually refers to a company scraper
 COMPANIES_PREFIX = 'companies:'
 
-# map from table name to fields used for the primary key (not including
-# campaign_id). All key fields are currently TEXT
-TABLE_TO_KEY_FIELDS = {
-    # factual information about a brand (e.g. company, url, etc.)
-    'brand': ['company', 'brand'],
-    # factual information about which categories a brand belongs to
-    'brand_category': ['company', 'brand', 'category'],
-    # info about a campaign's creator, etc.
-    'campaign': ['campaign_id'],
-    # map from brand in campaign to canonical version
-    'campaign_brand_map': [
-        'campaign_id', 'campaign_company', 'campaign_brand'],
-    # should you buy this brand?
-    'campaign_brand_rating': ['campaign_id', 'company', 'brand', 'scope'],
-    # map from category in campaign to canonical version
-    'campaign_category_map': ['campaign_id', 'campaign_category'],
-    # map from company in campaign to canonical version
-    'campaign_company_map': ['campaign_id', 'campaign_company'],
-    # should you buy from this company?
-    'campaign_company_rating': ['campaign_id', 'company', 'scope'],
-    # factual information about a company (e.g. url, email, etc.)
-    'company': ['company'],
-    # factual information about which categories a company belongs to
-    'company_category': ['company', 'category'],
-}
-
-
-RATING_FIELDS = [
-    # -1 (bad), 0 (mixed), or 1 (good). Lingua franca of ratings
-    ('judgment', 'TINYINT'),
-    # letter grade
-    ('grade', 'TEXT'),
-    # written description (e.g. cannot recommend)
-    ('description', 'TEXT'),
-    # numeric score (higher numbers are good)
-    ('score', 'NUMERIC'),
-    ('min_score', 'NUMERIC'),
-    ('max_score', 'NUMERIC'),
-    # ranking (low numbers are good)
-    ('rank', 'INTEGER'),
-    ('num_ranked', 'INTEGER'),
-    # url for details about the rating
-    ('url', 'TEXT'),
-]
-
-
-TABLE_TO_EXTRA_FIELDS = {
-    'campaign': [('last_scraped', 'TEXT')],
-    'campaign_brand_map': [('company', 'TEXT'), ('brand', 'TEXT')],
-    'campaign_brand_rating': RATING_FIELDS,
-    'campaign_category_map': [('category', 'TEXT')],
-    'campaign_company_map': [('company', 'TEXT')],
-    'campaing_company_rating': RATING_FIELDS,
-}
-
-
 
 
 log = logging.getLogger(__name__)
+
+
+def download_and_merge_dbs():
+    if exists(MERGED_DB_FILENAME):
+        remove(MERGED_DB_FILENAME)
+
+    merged_db = sqlite3.connect(MERGED_DB_FILENAME)
+    dt = DumpTruck(MERGED_DB_FILENAME)
+
+    for db_name in sorted(DB_TO_URL):
+        db = open_db(db_name)
+
+        for table in show_tables(db.execute):
+            if table not in TABLE_TO_KEY_FIELDS:
+                log.warn('Unknown table `{}` in {} db, skipping'.format(
+                    table, db_name))
+
+            log.info('{}.{} -> {}'.format(db_name, table, MERGED_DB_FILENAME))
+
+            create_table_if_not_exists(table, execute=merged_db.execute)
+
+            for row in db.execute('SELECT * FROM `{}`'.format(table)):
+                # prepend db name to scraper ID
+                full_scraper_id = '{}:{}'.format(db_name, row['scraper_id'])
+                row = dict(row, scraper_id=full_scraper_id)
+                dt.upsert(row, table)
 
 
 def open_db(name):
@@ -154,15 +129,9 @@ def open_output_db():
         db = sqlite3.connect(OUTPUT_DB_TMP_FILENAME)
 
         # init tables
-        for table, key_fields in sorted(TABLE_TO_KEY_FIELDS.items()):
-            sql = 'CREATE TABLE `{}` ('.format(table)
-            for k in key_fields:
-                sql += '`{}` TEXT, '.format(k)
-            for k, field_type in TABLE_TO_EXTRA_FIELDS.get(table) or ():
-                sql += '`{}` {}, '.format(k, field_type)
-            sql += 'PRIMARY KEY ({}))'.format(', '.join(key_fields))
-
-            db.execute(sql)
+        for table in sorted(TABLE_TO_KEY_FIELDS):
+            create_table_if_not_exists(
+                table, with_scraper_id=False, execute=db.execute)
 
         open_output_db._db = db
 

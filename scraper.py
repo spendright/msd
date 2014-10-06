@@ -9,6 +9,7 @@ from lib.company import name_company
 from lib.company import handle_matched_company
 from lib.db import output_row
 from lib.db import close_output_db
+from lib.db import download_and_merge_dbs
 from lib.db import select_all_campaigns
 
 
@@ -24,6 +25,11 @@ def main():
     elif opts.quiet:
         level = logging.WARN
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
+
+    # create merged data
+    download_and_merge_dbs()
+
+    return
 
     # campaigns
     log.info('Outputting campaign table')
