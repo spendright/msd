@@ -2,15 +2,15 @@ import logging
 from argparse import ArgumentParser
 from os import environ
 
-from lib.category import get_category_map
-from lib.category import output_category_rows
-from lib.company import match_companies
-from lib.company import name_company
-from lib.company import handle_matched_company
-from lib.db import output_row
-from lib.db import close_output_db
-from lib.db import download_and_merge_dbs
-from lib.db import select_all_campaigns
+from sres.category import get_category_map
+from sres.category import output_category_rows
+from sres.company import match_companies
+from sres.company import name_company
+from sres.company import handle_matched_company
+from sres.db import output_row
+from sres.db import close_output_db
+from sres.db import download_and_merge_dbs
+from sres.db import select_all_campaigns
 
 
 log = logging.getLogger('scraper')
