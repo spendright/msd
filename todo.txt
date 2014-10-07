@@ -1,3 +1,4 @@
+- Right now, SAB Miller and SABMiller are separate companies. Oops.
 - add "parent_brand" field for brands that have have other brands from
   the same company as their prefix
     (e.g. XPS, XPS 10; iPod, iPod nano)

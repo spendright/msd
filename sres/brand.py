@@ -22,18 +22,16 @@ from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
 
-COMPANIES_PREFIX = None  # quiet pyflakes for now
-
 
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
     'Taylormade - Adidas Golf': 'Taylormade',
 }
 
-# incorrect brand information for particular campaigns
-# this maps campaign_id to company name in that campaign
+# incorrect brand information for particular scrapers
+# this maps scraper_id to company name used by that scraper
 IGNORE_BRANDS = {
-    'climate_counts': {
+    'campaigns:climate_counts': {
         'Baxter International': None,
         'Britax': None,
         'Clorox': None,
@@ -49,14 +47,14 @@ IGNORE_BRANDS = {
         'Sony': None,
         'eBay': {'GE'},  # ???
     },
-    'free2work': {
+    'campaigns:free2work': {
         'Bob Barker Company': {  # makes prison supplies
             'Comfort Zone',
             'Liberty',  # heh
             'MacGregor',
             'Tristich'
         },
-        'Hanesbrands Incorporated': None,  # use scraper
+        'Hanesbrands Incorporated': None,  # use company scraper
     },
 }
 
@@ -72,7 +70,7 @@ def fix_brand(brand):
 
 
 def get_brands_for_company(keys):
-    """Given keys, a list of (campaign_id, company), return a dictionary
+    """Given keys, a list of (scraper_id, company), return a dictionary
     mapping canonical brand name to information about that brand."""
 
     # we'll eventually need the ability to choose a master list
@@ -83,62 +81,45 @@ def get_brands_for_company(keys):
     # We'll also need to catch when a brand has been rated but isn't
     # in the master list (include it but issue a warning)
     brand_rows = []
-    for campaign_id, company in sorted(keys):
-        if (campaign_id in IGNORE_BRANDS and
-            company in IGNORE_BRANDS[campaign_id]):
+    for scraper_id, company in sorted(keys):
+        if (scraper_id in IGNORE_BRANDS and
+            company in IGNORE_BRANDS[scraper_id]):
 
-            if IGNORE_BRANDS[campaign_id][company] is None:
+            if IGNORE_BRANDS[scraper_id][company] is None:
                 continue  # None means exclude all brands
             else:
-                ignore = IGNORE_BRANDS[campaign_id][company]
+                ignore = IGNORE_BRANDS[scraper_id][company]
         else:
             ignore = ()
 
-        for brand_row in select_brands(campaign_id, company):
+        for brand_row in select_brands(scraper_id, company):
             if brand_row['brand'] not in ignore:
                 brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
         return norm_with_variants(brand_row['brand'])
 
-    company_scrapers = set()
-    company_scraper_brands = set()
     brand_to_row = {}
     brand_map = {}
 
     for brand_row_group in group_by_keys(brand_rows, keyfunc):
-        # does any of this come from a company scraper?
-        brand_company_scrapers = set(
-            br['campaign_id'][len(COMPANIES_PREFIX):]
-            for br in brand_row_group
-            if br['campaign_id'].startswith(COMPANIES_PREFIX))
-
         # don't give special priority to brands from company scrapers;
         # these are sometimes ALL CAPS
+        #
+        # TODO: revisit this. If a brand from a company scraper *isn't*
+        # all caps, it's more likely to be the correct spelling than
+        # data from a campaign.
         brand = pick_brand_name(br['brand'] for br in brand_row_group)
 
         # update mapping
         for br in brand_row_group:
-            brand_map[(br['campaign_id'], br['brand'])] = brand
+            brand_map[(br['scraper_id'], br['brand'])] = brand
 
         brand_row = merge_dicts(brand_row_group)
         brand_row['brand'] = brand
-        del brand_row['campaign_id']
+        del brand_row['scraper_id']
 
         brand_to_row[brand] = brand_row
-
-        company_scraper_brands.add(brand)
-        company_scrapers.update(brand_company_scrapers)
-
-    # check if there are any brands that are mentioned by campaigns
-    # but not company scrapers. Sometimes campaigns include brands
-    # from other companies by mistake
-    if company_scraper_brands:
-        extra_brands = set(brand_to_row) - company_scraper_brands
-        if extra_brands:
-            log.warn(u'Extra brand(s) {} not mentioned by company scrapers'
-                     ' ({})'.format(', '.join(sorted(extra_brands)),
-                                    ', '.join(sorted(company_scraper_brands))))
 
     return brand_to_row, brand_map
 

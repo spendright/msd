@@ -45,10 +45,6 @@ def main():
     category_map = get_category_map()
     output_category_rows(category_map)
 
-    # STOP HERE
-    close_output_db()
-    return
-
     # everything else
     log.info('Matching up companies')
     # handle in more-or-less alphabetical order
