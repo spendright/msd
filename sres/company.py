@@ -38,9 +38,11 @@ log = logging.getLogger(__name__)
 COMPANY_CORRECTIONS = {
     'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
+    'Groupo Modelo S.A.B. de C.V.': 'Grupo Modelo S.A.B. de C.V.',
     'Hanesbrands Incorporated': 'Hanesbrands Inc.',
     'Nescafe': u'Nestlé',  # Nescafé is a brand, not a company
     'PUMA AG Rudolf Dassler Sport': 'Puma SE',
+    'SAB Miller': 'SABMiller',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
     'Woolworths Australia': 'Woolworths Limited',
@@ -99,6 +101,13 @@ X_CO_RE = re.compile(
     r'^(?P<company>.*?)( \&)? Co\.$'
 )
 
+# regexes for stuff that's okay to strip
+COMPANY_DISPLAY_REGEXES = [
+    THE_X_CO_RE,
+    X_CO_RE,
+]
+
+
 # "The X Company" -- okay for matching, but don't use as short name
 THE_X_COMPANY_RE = re.compile(
     r'^The (?P<company>.*) (Co\.|Corporation|Cooperative|Company|Group)$')
@@ -109,8 +118,7 @@ X_COMPANY_RE = re.compile(
     r'Brands'
     r'|Co.'
     r'|Company'
-    r'|Corporation'
-    r'|Enterprises'
+    r'|Corporation'    r'|Enterprises'
     r'|Group'
     r'|Gruppe'
     r'|Holdings?'
@@ -119,8 +127,23 @@ X_COMPANY_RE = re.compile(
     r')$'
 )
 
+# "Groupe X", etc -- basically the non-English version of X Group
+GROUPE_X_RE = re.compile(
+    r'^(Groupe'
+    r'|Grupo'
+    r'|Gruppo'
+    r') (?P<company>.*)$'
+)
 
+# regexes for pulling out company names that are okay for matching
+# but shouldn't automatically qualify to be used as a company's canonical name
+COMPANY_MATCHING_REGEXES = [
+    THE_X_COMPANY_RE,
+    X_COMPANY_RE,
+    GROUPE_X_RE,
+]
 
+# Inc. etc. -- stuff to strip before even doing the above
 COMPANY_TYPE_RE = re.compile(
     r'^(?P<company>.*?)(?P<intl1> International)?,? (?P<type>'
     r'A\.?& S\. Klein GmbH \& Co\. KG'
@@ -164,6 +187,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|SARL'
     r'|SE'
     r'|S\.A\.?'
+    r'|S.A.B. de C.V.'
     r'|S\.A\.U\.'
     r'|S\.R\.L\.'
     r'|S\.p\.A\.'
@@ -416,25 +440,17 @@ def get_company_name_variants(company):
 
         display_variants.add(company)
 
-        m = THE_X_CO_RE.match(company)
-        if m:
-            display_variants.add(m.group('company'))
-            return
+        for regex in COMPANY_DISPLAY_REGEXES:
+            m = regex.match(company)
+            if m:
+                display_variants.add(m.group('company'))
+                return
 
-        m = X_CO_RE.match(company)
-        if m:
-            display_variants.add(m.group('company'))
-            return
-
-        m = THE_X_COMPANY_RE.match(company)
-        if m:
-            matching_variants.add(m.group('company'))
-            return
-
-        m = X_COMPANY_RE.match(company)
-        if m:
-            matching_variants.add(m.group('company'))
-            return
+        for regex in COMPANY_MATCHING_REGEXES:
+            m = regex.match(company)
+            if m:
+                matching_variants.add(m.group('company'))
+                return
 
     handle(company)
 
