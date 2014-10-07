@@ -70,7 +70,7 @@ def download_and_merge_dbs():
 
             create_table_if_not_exists(table, db=db)
 
-            for row in db.execute('SELECT * FROM `{}`'.format(table)):
+            for row in src_db.execute('SELECT * FROM `{}`'.format(table)):
                 # prepend db name to scraper ID
                 scraper_id = '{}:{}'.format(src_db_name, row['scraper_id'])
                 row = dict(row, scraper_id=scraper_id)
@@ -80,29 +80,31 @@ def download_and_merge_dbs():
 def open_input_db():
     # TODO: does it actually save us anything to cache the input db?
     if not hasattr(open_input_db, '_db'):
-        open_input_db._db = open_input_db(INPUT_DB_NAME)
+        open_input_db._db = open_db(INPUT_DB_NAME)
 
     return open_input_db._db
 
 
+def init_output_db():
+    """Create a fresh output DB and its tables."""
+    if exists(OUTPUT_DB_PATH):
+        log.debug('Removing old version of {}'.format(
+            OUTPUT_DB_PATH))
+        remove(OUTPUT_DB_PATH)
+
+    db = open_output_db()
+
+    # init tables
+    log.info('Initializing {}'.format(OUTPUT_DB_PATH))
+    for table in sorted(TABLE_TO_KEY_FIELDS):
+        create_table_if_not_exists(
+            table, with_scraper_id=False, db=db)
+
+
 def open_output_db():
-    """Open a DB for output into a temp file.
-
-    If we haven't already opened it, initialize its tables."""
+    """Open a DB for output into a temp file."""
     if not hasattr(open_output_db, '_db'):
-        if exists(OUTPUT_DB_PATH):
-            log.debug('Removing old version of {}'.format(
-                OUTPUT_DB_PATH))
-            remove(OUTPUT_DB_PATH)
-
-        db = open_db(OUTPUT_DB_NAME)
-
-        # init tables
-        for table in sorted(TABLE_TO_KEY_FIELDS):
-            create_table_if_not_exists(
-                table, with_scraper_id=False, db=db)
-
-        open_output_db._db = db
+        open_output_db._db = open_db(OUTPUT_DB_NAME)
 
     return open_output_db._db
 

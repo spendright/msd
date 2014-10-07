@@ -38,7 +38,7 @@ BAD_CATEGORIES = {
 log = logging.getLogger(__name__)
 
 
-def fix_category(category, campaign_id):
+def fix_category(category, scraper_id):
     category = fix_bad_chars(category)
     category = category.replace('&', ' and ')
     category = simplify_whitespace(category)
@@ -56,12 +56,12 @@ def fix_category(category, campaign_id):
 def get_category_map():
     key_to_category = {}
 
-    for campaign_id, campaign_category in select_all_categories():
-        category = fix_category(campaign_category, campaign_id)
+    for scraper_id, scraper_category in select_all_categories():
+        category = fix_category(scraper_category, scraper_id)
         if category is None:
             continue
 
-        key_to_category[(campaign_id, campaign_category)] = category
+        key_to_category[(scraper_id, scraper_category)] = category
 
     return key_to_category
 
@@ -72,25 +72,25 @@ def output_category_rows(category_map):
         category_to_keys[category].add(key)
 
     for category, keys in sorted(category_to_keys.items()):
-        campaign_ids = sorted(set(key[0] for key in keys))
+        scraper_ids = sorted(set(key[0] for key in keys))
         log.info(u'{} ({})'.format(
-            category, ', '.join(c for c in campaign_ids)))
+            category, ', '.join(c for c in scraper_ids)))
 
-        for campaign_id, campaign_category in keys:
-            map_row = dict(campaign_id=campaign_id,
-                           campaign_category=campaign_category,
+        for scraper_id, scraper_category in keys:
+            map_row = dict(scraper_id=scraper_id,
+                           scraper_category=scraper_category,
                            category=category)
 
-            output_row(map_row, 'campaign_category_map')
+            output_row(map_row, 'scraper_category_map')
 
 
 def get_company_categories(company, keys, category_map):
     category_rows = []
 
-    for campaign_id, campaign_company in keys:
+    for scraper_id, scraper_company in keys:
         category_rows.extend(_map_categories(
-            select_company_categories(campaign_id, campaign_company),
-            campaign_id, category_map))
+            select_company_categories(scraper_id, scraper_company),
+            scraper_id, category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
@@ -101,13 +101,13 @@ def get_company_categories(company, keys, category_map):
 def get_brand_categories(company, brand, keys, category_map):
     category_rows = []
 
-    for campaign_id, campaign_company, campaign_brand in keys:
+    for scraper_id, scraper_company, scraper_brand in keys:
 
         brand_category_rows = select_brand_categories(
-            campaign_id, campaign_company, campaign_brand)
+            scraper_id, scraper_company, scraper_brand)
 
         category_rows.extend(_map_categories(
-            brand_category_rows, campaign_id, category_map))
+            brand_category_rows, scraper_id, category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
@@ -115,9 +115,9 @@ def get_brand_categories(company, brand, keys, category_map):
         yield _fix_category_row(row, company, brand)
 
 
-def _map_categories(rows, campaign_id, category_map):
+def _map_categories(rows, scraper_id, category_map):
     for row in rows:
-        category = category_map.get((campaign_id, row['category']))
+        category = category_map.get((scraper_id, row['category']))
         if not category:  # bad category like "Other"
             continue
         row['category'] = category
@@ -125,7 +125,7 @@ def _map_categories(rows, campaign_id, category_map):
         yield row
 
 def _fix_category_row(row, company, brand=None):
-    del row['campaign_id']
+    del row['scraper_id']
 
     row['company'] = company
     if brand is not None:
