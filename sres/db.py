@@ -16,103 +16,68 @@
 """Download and open databases."""
 
 import logging
-import sqlite3
-from dumptruck import DumpTruck
-from os import environ
 from os import rename
 from os import remove
 from os.path import exists
-from tempfile import NamedTemporaryFile
-from urllib import urlencode
-from urllib2 import urlopen
 
+from srs.db import DB_FILE_EXT
+from srs.db import DEFAULT_DB_NAME
+from srs.db import DEFAULT_DB_PATH
 from srs.db import TABLE_TO_KEY_FIELDS
 from srs.db import create_table_if_not_exists
+from srs.db import download_db
+from srs.db import open_db
+from srs.db import open_dt
 from srs.db import show_tables
 
-
-DB_TO_URL = {
-    'campaigns': 'https://morph.io/spendright-scrapers/campaigns/data.sqlite',
-    'companies': 'https://morph.io/spendright-scrapers/companies/data.sqlite',
+SOURCE_DBS = {
+    'campaigns',
+    'companies',
 }
 
-CHUNK_SIZE = 1024
+# TODO: use scraper_id instead
+COMPANIES_PREFIX = None
 
-MERGED_DB_FILENAME = 'merged.sqlite'
-OUTPUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
-OUTPUT_DB_FILENAME = 'data.sqlite'
+RAW_DB_NAME = 'raw'
+RAW_DB_PATH = RAW_DB_NAME + DB_FILE_EXT
 
-# used to indicate that a "campaign ID" actually refers to a company scraper
-COMPANIES_PREFIX = 'companies:'
-
+TMP_DB_NAME = DEFAULT_DB_NAME + '.tmp'
+TMP_DB_PATH = TMP_DB_NAME + DB_FILE_EXT
 
 
 log = logging.getLogger(__name__)
 
 
 def download_and_merge_dbs():
-    if exists(MERGED_DB_FILENAME):
-        remove(MERGED_DB_FILENAME)
+    if exists(RAW_DB_PATH):
+        log.debug('Removing old version of {}'.format(RAW_DB_PATH))
+        remove(RAW_DB_PATH)
 
-    merged_db = sqlite3.connect(MERGED_DB_FILENAME)
-    dt = DumpTruck(MERGED_DB_FILENAME)
+    db = open_db(RAW_DB_NAME)
+    dt = open_dt(RAW_DB_NAME)
 
-    for db_name in sorted(DB_TO_URL):
-        db = open_db(db_name)
+    for src_db_name in sorted(SOURCE_DBS):
+        download_db(src_db_name)
+        src_db = open_db(src_db_name)
 
-        for table in show_tables(db.execute):
+        for table in show_tables(src_db):
             if table not in TABLE_TO_KEY_FIELDS:
                 log.warn('Unknown table `{}` in {} db, skipping'.format(
-                    table, db_name))
+                    table, src_db_name))
 
-            log.info('{}.{} -> {}'.format(db_name, table, MERGED_DB_FILENAME))
+            log.info('{}.{} -> {}'.format(src_db_name, table, RAW_DB_PATH))
 
-            create_table_if_not_exists(table, execute=merged_db.execute)
+            create_table_if_not_exists(table, db=db)
 
             for row in db.execute('SELECT * FROM `{}`'.format(table)):
                 # prepend db name to scraper ID
-                full_scraper_id = '{}:{}'.format(db_name, row['scraper_id'])
-                row = dict(row, scraper_id=full_scraper_id)
+                scraper_id = '{}:{}'.format(src_db_name, row['scraper_id'])
+                row = dict(row, scraper_id=scraper_id)
                 dt.upsert(row, table)
 
 
-def open_db(name):
-    if not hasattr(open_db, '_name_to_db'):
-        open_db._name_to_db = {}
-
-    if name not in open_db._name_to_db:
-        filename = name + '.sqlite'
-        if not exists(filename):
-            if 'MORPH_API_KEY' not in environ:
-                raise ValueError(
-                    'Must set MORPH_API_KEY to download {} db'.format(name))
-
-            url = DB_TO_URL[name] + '?' + urlencode(
-                {'key': environ['MORPH_API_KEY']})
-
-            log.info('downloading {} -> {}'.format(url, filename))
-            download(url, filename)
-        else:
-            log.info('opening local copy of {}'.format(filename))
-
-        db = sqlite3.connect(filename)
-        db.row_factory = sqlite3.Row
-        open_db._name_to_db[name] = db
-
-    return open_db._name_to_db[name]
-
-
-def download(url, dest):
-    with NamedTemporaryFile(prefix=dest + '.tmp.', dir='.', delete=False) as f:
-        src = urlopen(url)
-        while True:
-            chunk = src.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            f.write(chunk)
-
-        f.close()
-        rename(f.name, dest)
+def open_raw_db():
+    return open_db(RAW_DB_NAME)
 
 
 def open_output_db():
@@ -120,52 +85,52 @@ def open_output_db():
 
     If we haven't already opened it, initialize its tables."""
     if not hasattr(open_output_db, '_db'):
-        if exists(OUTPUT_DB_TMP_FILENAME):
+        if exists(TMP_DB_PATH):
             log.debug('Removing old version of {}'.format(
-                OUTPUT_DB_TMP_FILENAME))
-            remove(OUTPUT_DB_TMP_FILENAME)
+                TMP_DB_PATH))
+            remove(TMP_DB_PATH)
 
-        log.debug('Opening {}'.format(OUTPUT_DB_TMP_FILENAME))
-        db = sqlite3.connect(OUTPUT_DB_TMP_FILENAME)
+        db = open_db(TMP_DB_NAME)
 
         # init tables
         for table in sorted(TABLE_TO_KEY_FIELDS):
             create_table_if_not_exists(
-                table, with_scraper_id=False, execute=db.execute)
+                table, with_scraper_id=False, db=db)
 
         open_output_db._db = db
 
     return open_output_db._db
 
 
-def open_output_dump_truck():
-    if not hasattr(open_output_dump_truck, '_dump_truck'):
+def open_output_dt():
+    """Get the DumpTruck for the output DB"""
+    if not hasattr(open_output_dt, '_dt'):
         open_output_db()
-        open_output_dump_truck._dump_truck = DumpTruck(OUTPUT_DB_TMP_FILENAME)
+        open_output_dt._dt = open_dt(TMP_DB_NAME)
 
-    return open_output_dump_truck._dump_truck
+    return open_output_dt._dt
 
 
 def output_row(row, table):
     row = clean_row(row)
     log.debug('{}: {}'.format(table, repr(row)))
 
-    dt = open_output_dump_truck()
+    dt = open_output_dt()
     dt.upsert(row, table)
 
 
 def close_output_db():
     """Move output_db into place."""
     log.debug('Closing {} and renaming to {}'.format(
-        OUTPUT_DB_TMP_FILENAME, OUTPUT_DB_FILENAME))
+        TMP_DB_PATH, DEFAULT_DB_PATH))
 
     open_output_db._db.close()
     if hasattr(open_output_db, '_db'):
         del open_output_db._db
-    if hasattr(open_output_dump_truck, '_dump_truck'):
-        del open_output_dump_truck._dump_truck
+    if hasattr(open_output_dt, '_dt'):
+        del open_output_dt._dt
 
-    rename(OUTPUT_DB_TMP_FILENAME, OUTPUT_DB_FILENAME)
+    rename(TMP_DB_PATH, DEFAULT_DB_PATH)
 
 
 def clean_row(row):
