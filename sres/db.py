@@ -35,26 +35,27 @@ SOURCE_DBS = {
     'companies',
 }
 
-# TODO: use scraper_id instead
-COMPANIES_PREFIX = None
+CAMPAIGNS_PREFIX = 'campaigns:'
 
-RAW_DB_NAME = 'raw'
-RAW_DB_PATH = RAW_DB_NAME + DB_FILE_EXT
+INPUT_DB_NAME = 'input'
+INPUT_DB_PATH = INPUT_DB_NAME + DB_FILE_EXT
 
-TMP_DB_NAME = DEFAULT_DB_NAME + '.tmp'
-TMP_DB_PATH = TMP_DB_NAME + DB_FILE_EXT
+OUTPUT_DB_NAME = DEFAULT_DB_NAME + '.tmp'
+OUTPUT_DB_PATH = OUTPUT_DB_NAME + DB_FILE_EXT
 
 
 log = logging.getLogger(__name__)
 
 
 def download_and_merge_dbs():
-    if exists(RAW_DB_PATH):
-        log.debug('Removing old version of {}'.format(RAW_DB_PATH))
-        remove(RAW_DB_PATH)
+    """Download the various scraper DBs and merge into a single
+    "input" DB."""
+    if exists(INPUT_DB_PATH):
+        log.debug('Removing old version of {}'.format(INPUT_DB_PATH))
+        remove(INPUT_DB_PATH)
 
-    db = open_db(RAW_DB_NAME)
-    dt = open_dt(RAW_DB_NAME)
+    db = open_db(INPUT_DB_NAME)
+    dt = open_dt(INPUT_DB_NAME)
 
     for src_db_name in sorted(SOURCE_DBS):
         download_db(src_db_name)
@@ -65,7 +66,7 @@ def download_and_merge_dbs():
                 log.warn('Unknown table `{}` in {} db, skipping'.format(
                     table, src_db_name))
 
-            log.info('{}.{} -> {}'.format(src_db_name, table, RAW_DB_PATH))
+            log.info('{}.{} -> {}'.format(src_db_name, table, INPUT_DB_PATH))
 
             create_table_if_not_exists(table, db=db)
 
@@ -76,8 +77,12 @@ def download_and_merge_dbs():
                 dt.upsert(row, table)
 
 
-def open_raw_db():
-    return open_db(RAW_DB_NAME)
+def open_input_db():
+    # TODO: does it actually save us anything to cache the input db?
+    if not hasattr(open_input_db, '_db'):
+        open_input_db._db = open_input_db(INPUT_DB_NAME)
+
+    return open_input_db._db
 
 
 def open_output_db():
@@ -85,12 +90,12 @@ def open_output_db():
 
     If we haven't already opened it, initialize its tables."""
     if not hasattr(open_output_db, '_db'):
-        if exists(TMP_DB_PATH):
+        if exists(OUTPUT_DB_PATH):
             log.debug('Removing old version of {}'.format(
-                TMP_DB_PATH))
-            remove(TMP_DB_PATH)
+                OUTPUT_DB_PATH))
+            remove(OUTPUT_DB_PATH)
 
-        db = open_db(TMP_DB_NAME)
+        db = open_db(OUTPUT_DB_NAME)
 
         # init tables
         for table in sorted(TABLE_TO_KEY_FIELDS):
@@ -106,7 +111,7 @@ def open_output_dt():
     """Get the DumpTruck for the output DB"""
     if not hasattr(open_output_dt, '_dt'):
         open_output_db()
-        open_output_dt._dt = open_dt(TMP_DB_NAME)
+        open_output_dt._dt = open_dt(OUTPUT_DB_NAME)
 
     return open_output_dt._dt
 
@@ -122,7 +127,7 @@ def output_row(row, table):
 def close_output_db():
     """Move output_db into place."""
     log.debug('Closing {} and renaming to {}'.format(
-        TMP_DB_PATH, DEFAULT_DB_PATH))
+        OUTPUT_DB_PATH, DEFAULT_DB_PATH))
 
     open_output_db._db.close()
     if hasattr(open_output_db, '_db'):
@@ -130,7 +135,7 @@ def close_output_db():
     if hasattr(open_output_dt, '_dt'):
         del open_output_dt._dt
 
-    rename(TMP_DB_PATH, DEFAULT_DB_PATH)
+    rename(OUTPUT_DB_PATH, DEFAULT_DB_PATH)
 
 
 def clean_row(row):
@@ -140,142 +145,102 @@ def clean_row(row):
 
     row = dict((k, row[k]) for k in row.keys() if row[k] is not None)
 
-    # TODO: kind of a hack to make company scrapers look like campaign scrapers
-    if 'scraper_id' in row:
-        row['campaign_id'] = COMPANIES_PREFIX + row.pop('scraper_id')
-
     return row
 
 
-def select_brands(campaign_id, company):
-    if campaign_id.startswith(COMPANIES_PREFIX):
-        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
+def select_brands(scraper_id, company):
+    db = open_input_db()
 
-        db = open_db('companies')
-        cursor = db.execute(
-            'SELECT * FROM brand WHERE scraper_id = ?'
-            ' AND company = ?', [scraper_id, company])
-    else:
-        db = open_db('campaigns')
-        cursor = db.execute(
-            'SELECT * FROM campaign_brand WHERE campaign_id = ?'
-            ' AND company = ?', [campaign_id, company])
+    cursor = db.execute(
+        'SELECT * FROM brand WHERE scraper_id = ?'
+        ' AND company = ?', [scraper_id, company])
 
     return [clean_row(row) for row in cursor]
 
 
-def select_brand_ratings(campaign_id, company, brand):
-    if campaign_id.startswith(COMPANIES_PREFIX):
+def select_brand_ratings(scraper_id, company, brand):
+    # campaign_id is derived from scraper_id
+    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
         return []
+    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
 
-    db = open_db('campaigns')
+    db = open_input_db()
 
     return [clean_row(row) for row in
             db.execute(
-                'SELECT * FROM campaign_brand_rating WHERE campaign_id = ?'
+                'SELECT * FROM campaign_brand_rating WHERE'
+                ' scraper_id = ? AND campaign_id = ?'
                 ' AND company = ? AND brand = ?',
-                [campaign_id, company, brand])]
+                [scraper_id, campaign_id, company, brand])]
 
 
-def select_company(campaign_id, company):
-    if campaign_id.startswith(COMPANIES_PREFIX):
-        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
+def select_company(scraper_id, company):
+    db = open_input_db()
 
-        db = open_db('companies')
-        cursor = db.execute(
-            'SELECT * FROM company WHERE scraper_id = ?'
-            ' AND company = ?', [scraper_id, company])
-    else:
-        db = open_db('campaigns')
-        cursor = db.execute(
-            'SELECT * FROM campaign_company WHERE campaign_id = ?'
-            ' AND company = ?', [campaign_id, company])
+    cursor = db.execute(
+        'SELECT * FROM company WHERE scraper_id = ?'
+        ' AND company = ?', [scraper_id, company])
 
     return clean_row(cursor.fetchone())
 
 
-def select_company_ratings(campaign_id, company):
-    if campaign_id.startswith(COMPANIES_PREFIX):
+def select_company_ratings(scraper_id, company):
+    # campaign_id is derived from scraper_id
+    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
         return []
+    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
 
-    db = open_db('campaigns')
+    db = open_input_db()
 
     return [clean_row(row) for row in
             db.execute(
-                'SELECT * FROM campaign_company_rating WHERE campaign_id = ?'
+                'SELECT * FROM campaign_company_rating WHERE'
+                ' scraper_id = ? AND campaign_id = ?'
                 ' AND company = ?',
-                [campaign_id, company])]
+                [scraper_id, campaign_id, company])]
 
 
 def select_all_campaigns():
-    db = open_db('campaigns')
+    db = open_input_db()
 
     return [clean_row(row) for row in
             db.execute('SELECT * FROM campaign ORDER BY campaign_id')]
 
 
 def select_all_categories():
-    campaigns_db = open_db('campaigns')
-    for campaign_id, category in campaigns_db.execute(
-            'SELECT campaign_id, category'
-            ' FROM campaign_brand_category UNION '
-            'SELECT campaign_id, category'
-            ' FROM campaign_company_category'
-            ' GROUP BY campaign_id, category'):
-        yield campaign_id, category
+    db = open_input_db()
 
-    companies_db = open_db('companies')
-    for scraper_id, category in companies_db.execute(
+    for scraper_id, category in db.execute(
             'SELECT scraper_id, category FROM brand_category UNION '
             'SELECT scraper_id, category FROM company_category'
             ' GROUP BY category'):
-        yield COMPANIES_PREFIX + scraper_id, category
-
+        yield scraper_id, category
 
 
 def select_all_companies():
-    campaigns_db = open_db('campaigns')
-    for campaign_id, company in campaigns_db.execute(
-            'SELECT campaign_id, company from campaign_company'):
-        yield campaign_id, company
+    db = open_input_db()
 
-    companies_db = open_db('companies')
-    for scraper_id, company in companies_db.execute(
+    for scraper_id, company in db.execute(
             'SELECT scraper_id, company from company'):
-        yield COMPANIES_PREFIX + scraper_id, company
+        yield scraper_id, company
 
 
-def select_company_categories(campaign_id, company):
-    if campaign_id.startswith(COMPANIES_PREFIX):
-        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
+def select_company_categories(scraper_id, company):
+    db = open_input_db()
 
-        db = open_db('companies')
-        cursor = db.execute('SELECT * from company_category'
-                            ' WHERE scraper_id = ? AND company = ?',
-                            [scraper_id, company])
-    else:
-        db = open_db('campaigns')
-        cursor = db.execute('SELECT * from campaign_company_category'
-                            ' WHERE campaign_id = ? AND company = ?',
-                            [campaign_id, company])
+    cursor = db.execute('SELECT * from company_category'
+                        ' WHERE scraper_id = ? AND company = ?',
+                        [scraper_id, company])
 
     return [clean_row(row) for row in cursor]
 
 
-def select_brand_categories(campaign_id, company, brand):
-    if campaign_id.startswith(COMPANIES_PREFIX):
-        scraper_id = campaign_id[len(COMPANIES_PREFIX):]
+def select_brand_categories(scraper_id, company, brand):
+    db = open_input_db()
 
-        db = open_db('companies')
-        cursor = db.execute('SELECT * from brand_category'
-                            ' WHERE scraper_id = ? AND company = ?'
-                            ' AND brand = ?',
-                            [scraper_id, company, brand])
-    else:
-        db = open_db('campaigns')
-        cursor = db.execute('SELECT * from campaign_brand_category'
-                            ' WHERE campaign_id = ? AND company = ?'
-                            ' AND brand = ?',
-                            [campaign_id, company, brand])
+    cursor = db.execute('SELECT * from brand_category'
+                        ' WHERE scraper_id = ? AND company = ?'
+                        ' AND brand = ?',
+                        [scraper_id, company, brand])
 
     return [clean_row(row) for row in cursor]

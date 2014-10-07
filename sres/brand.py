@@ -17,11 +17,13 @@
 import logging
 
 from .db import select_brands
-from .db import COMPANIES_PREFIX
 from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import norm_with_variants
+
+COMPANIES_PREFIX = None  # quiet pyflakes for now
+
 
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
