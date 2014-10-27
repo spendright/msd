@@ -20,12 +20,11 @@ from os import rename
 from os import remove
 from os.path import exists
 
-from srs.db import DB_FILE_EXT
 from srs.db import DEFAULT_DB_NAME
-from srs.db import DEFAULT_DB_PATH
 from srs.db import TABLE_TO_KEY_FIELDS
 from srs.db import create_table_if_not_exists
 from srs.db import download_db
+from srs.db import get_db_path
 from srs.db import open_db
 from srs.db import open_dt
 from srs.db import show_tables
@@ -39,11 +38,8 @@ SOURCE_DBS = {
 CAMPAIGNS_PREFIX = 'campaigns:'
 
 INPUT_DB_NAME = 'input'
-INPUT_DB_PATH = INPUT_DB_NAME + DB_FILE_EXT
 
 OUTPUT_DB_NAME = DEFAULT_DB_NAME + '.tmp'
-OUTPUT_DB_PATH = OUTPUT_DB_NAME + DB_FILE_EXT
-
 
 log = logging.getLogger(__name__)
 
@@ -51,9 +47,10 @@ log = logging.getLogger(__name__)
 def download_and_merge_dbs():
     """Download the various scraper DBs and merge into a single
     "input" DB."""
-    if exists(INPUT_DB_PATH):
-        log.debug('Removing old version of {}'.format(INPUT_DB_PATH))
-        remove(INPUT_DB_PATH)
+    input_db_path = get_db_path(INPUT_DB_NAME)
+    if exists(input_db_path):
+        log.debug('Removing old version of {}'.format(input_db_path))
+        remove(input_db_path)
 
     db = open_db(INPUT_DB_NAME)
     dt = open_dt(INPUT_DB_NAME)
@@ -67,7 +64,7 @@ def download_and_merge_dbs():
                 log.warn('Unknown table `{}` in {} db, skipping'.format(
                     table, src_db_name))
 
-            log.info('{}.{} -> {}'.format(src_db_name, table, INPUT_DB_PATH))
+            log.info('{}.{} -> {}'.format(src_db_name, table, input_db_path))
 
             create_table_if_not_exists(table, db=db)
 
@@ -88,10 +85,12 @@ def open_input_db():
 
 def init_output_db():
     """Create a fresh output DB and its tables."""
-    if exists(OUTPUT_DB_PATH):
+    output_db_path = get_db_path(OUTPUT_DB_NAME)
+
+    if exists(output_db_path):
         log.debug('Removing old version of {}'.format(
-            OUTPUT_DB_PATH))
-        remove(OUTPUT_DB_PATH)
+            output_db_path))
+        remove(output_db_path)
 
     open_output_db()
 
@@ -123,8 +122,11 @@ def output_row(row, table):
 
 def close_output_db():
     """Move output_db into place."""
+    output_db_path = get_db_path(OUTPUT_DB_NAME)
+    default_db_path = get_db_path(DEFAULT_DB_NAME)
+
     log.debug('Closing {} and renaming to {}'.format(
-        OUTPUT_DB_PATH, DEFAULT_DB_PATH))
+        output_db_path, default_db_path))
 
     open_output_db._db.close()
     if hasattr(open_output_db, '_db'):
@@ -132,7 +134,7 @@ def close_output_db():
     if hasattr(open_output_dt, '_dt'):
         del open_output_dt._dt
 
-    rename(OUTPUT_DB_PATH, DEFAULT_DB_PATH)
+    rename(output_db_path, default_db_path)
 
 
 def clean_row(row):
