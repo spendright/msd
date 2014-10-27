@@ -38,9 +38,11 @@ log = logging.getLogger(__name__)
 COMPANY_CORRECTIONS = {
     'Delta Airlines': 'Delta Air Lines',
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
+    'Groupo Modelo S.A.B. de C.V.': 'Grupo Modelo S.A.B. de C.V.',
     'Hanesbrands Incorporated': 'Hanesbrands Inc.',
     'Nescafe': u'Nestlé',  # Nescafé is a brand, not a company
     'PUMA AG Rudolf Dassler Sport': 'Puma SE',
+    'SAB Miller': 'SABMiller',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
     'Woolworths Australia': 'Woolworths Limited',
@@ -99,6 +101,13 @@ X_CO_RE = re.compile(
     r'^(?P<company>.*?)( \&)? Co\.$'
 )
 
+# regexes for stuff that's okay to strip
+COMPANY_DISPLAY_REGEXES = [
+    THE_X_CO_RE,
+    X_CO_RE,
+]
+
+
 # "The X Company" -- okay for matching, but don't use as short name
 THE_X_COMPANY_RE = re.compile(
     r'^The (?P<company>.*) (Co\.|Corporation|Cooperative|Company|Group)$')
@@ -109,8 +118,7 @@ X_COMPANY_RE = re.compile(
     r'Brands'
     r'|Co.'
     r'|Company'
-    r'|Corporation'
-    r'|Enterprises'
+    r'|Corporation'    r'|Enterprises'
     r'|Group'
     r'|Gruppe'
     r'|Holdings?'
@@ -119,8 +127,23 @@ X_COMPANY_RE = re.compile(
     r')$'
 )
 
+# "Groupe X", etc -- basically the non-English version of X Group
+GROUPE_X_RE = re.compile(
+    r'^(Groupe'
+    r'|Grupo'
+    r'|Gruppo'
+    r') (?P<company>.*)$'
+)
 
+# regexes for pulling out company names that are okay for matching
+# but shouldn't automatically qualify to be used as a company's canonical name
+COMPANY_MATCHING_REGEXES = [
+    THE_X_COMPANY_RE,
+    X_COMPANY_RE,
+    GROUPE_X_RE,
+]
 
+# Inc. etc. -- stuff to strip before even doing the above
 COMPANY_TYPE_RE = re.compile(
     r'^(?P<company>.*?)(?P<intl1> International)?,? (?P<type>'
     r'A\.?& S\. Klein GmbH \& Co\. KG'
@@ -164,6 +187,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|SARL'
     r'|SE'
     r'|S\.A\.?'
+    r'|S.A.B. de C.V.'
     r'|S\.A\.U\.'
     r'|S\.R\.L\.'
     r'|S\.p\.A\.'
@@ -227,10 +251,10 @@ def handle_matched_company(cd, category_map):
     # merge company rows
     company_row = {}
 
-    for campaign_id, company in sorted(cd['keys']):
-         company_row.update(select_company(campaign_id, company))
+    for scraper_id, company in sorted(cd['keys']):
+         company_row.update(select_company(scraper_id, company))
 
-    del company_row['campaign_id']  # should be at least one match
+    del company_row['scraper_id']  # should be at least one match
 
     company_row['company'] = company_canonical
     company_row['company_full'] = company_full
@@ -239,18 +263,18 @@ def handle_matched_company(cd, category_map):
     output_row(company_row, 'company')
 
     # store company map and ratings
-    for campaign_id, campaign_company in cd['keys']:
+    for scraper_id, scraper_company in cd['keys']:
         # map
         map_row = dict(
-            campaign_id=campaign_id, campaign_company=campaign_company,
+            scraper_id=scraper_id, scraper_company=scraper_company,
             company=company_canonical)
-        output_row(map_row, 'campaign_company_map')
+        output_row(map_row, 'scraper_company_map')
 
         # ratings (may be more than one because of `scope`)
         for rating_row in select_company_ratings(
-                campaign_id, campaign_company):
+                scraper_id, scraper_company):
             rating_row['company'] = company_canonical
-            output_row(rating_row, 'campaign_company_rating')
+            output_row(rating_row, 'scraper_company_rating')
 
     # store company categories
     for cat_row in get_company_categories(
@@ -264,28 +288,28 @@ def handle_matched_company(cd, category_map):
         output_row(brand_row, 'brand')
 
     # store brand map, rating
-    campaign_to_company = dict(cd['keys'])
+    scraper_to_company = dict(cd['keys'])
     brand_to_keys = defaultdict(set)
 
-    for (campaign_id, campaign_brand), brand_canonical in brand_map.items():
-        campaign_company = campaign_to_company[campaign_id]
+    for (scraper_id, scraper_brand), brand_canonical in brand_map.items():
+        scraper_company = scraper_to_company[scraper_id]
 
         brand_to_keys[brand_canonical].add(
-            (campaign_id, campaign_company, campaign_brand))
+            (scraper_id, scraper_company, scraper_brand))
 
         # map
         map_row = dict(
-            campaign_id=campaign_id, campaign_company=campaign_company,
-            campaign_brand=campaign_brand, company=company_canonical,
+            scraper_id=scraper_id, scraper_company=scraper_company,
+            scraper_brand=scraper_brand, company=company_canonical,
             brand=brand_canonical)
-        output_row(map_row, 'campaign_brand_map')
+        output_row(map_row, 'scraper_brand_map')
 
         # ratings
         for rating_row in select_brand_ratings(
-                campaign_id, campaign_company, campaign_brand):
+                scraper_id, scraper_company, scraper_brand):
             rating_row['company'] = company_canonical
             rating_row['brand'] = brand_canonical
-            output_row(rating_row, 'campaign_brand_rating')
+            output_row(rating_row, 'scraper_brand_rating')
 
     # store brand categories
     for brand_canonical, keys in sorted(brand_to_keys.items()):
@@ -318,21 +342,21 @@ def name_company(cd, brands=()):
     return short_name, full_name
 
 
-def match_companies(companies_with_campaign_ids=None, aliases=None):
+def match_companies(companies_with_scraper_ids=None, aliases=None):
     """Match up similar company names.
 
-    companies -- sequence of (campaign_id, company). Defaults to
-                 get_companies_with_campaign_ids()
+    companies -- sequence of (scraper_id, company). Defaults to
+                 get_companies_with_scraper_ids()
     aliases -- sequence of list of matching company names. Defaults to
                COMPANY_ALIASES
 
     Yields company dicts, which contain:
-    keys -- set of tuples of (campaign_id, original_company_name)
+    keys -- set of tuples of (scraper_id, original_company_name)
     display_names -- set of names appropriate for display
     matching_names -- set of names for matching
     """
-    if companies_with_campaign_ids is None:
-        companies_with_campaign_ids = select_all_companies()
+    if companies_with_scraper_ids is None:
+        companies_with_scraper_ids = select_all_companies()
     if aliases is None:
         aliases = COMPANY_ALIASES
 
@@ -345,10 +369,10 @@ def match_companies(companies_with_campaign_ids=None, aliases=None):
                          'matching_names': variants})
 
     # add in companies
-    for campaign_id, company in companies_with_campaign_ids:
+    for scraper_id, company in companies_with_scraper_ids:
         if not company:  # skip blank company names
             continue
-        keys = {(campaign_id, company)}
+        keys = {(scraper_id, company)}
 
         display, matching = get_company_name_variants(company)
 
@@ -416,25 +440,17 @@ def get_company_name_variants(company):
 
         display_variants.add(company)
 
-        m = THE_X_CO_RE.match(company)
-        if m:
-            display_variants.add(m.group('company'))
-            return
+        for regex in COMPANY_DISPLAY_REGEXES:
+            m = regex.match(company)
+            if m:
+                display_variants.add(m.group('company'))
+                return
 
-        m = X_CO_RE.match(company)
-        if m:
-            display_variants.add(m.group('company'))
-            return
-
-        m = THE_X_COMPANY_RE.match(company)
-        if m:
-            matching_variants.add(m.group('company'))
-            return
-
-        m = X_COMPANY_RE.match(company)
-        if m:
-            matching_variants.add(m.group('company'))
-            return
+        for regex in COMPANY_MATCHING_REGEXES:
+            m = regex.match(company)
+            if m:
+                matching_variants.add(m.group('company'))
+                return
 
     handle(company)
 

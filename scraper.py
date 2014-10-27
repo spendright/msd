@@ -9,6 +9,7 @@ from sres.company import name_company
 from sres.company import handle_matched_company
 from sres.db import output_row
 from sres.db import close_output_db
+from sres.db import init_output_db
 from sres.db import download_and_merge_dbs
 from sres.db import select_all_campaigns
 
@@ -26,10 +27,12 @@ def main():
         level = logging.WARN
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
 
-    # create merged data
-    download_and_merge_dbs()
+    # initialize output DB
+    init_output_db()
 
-    return
+    # create merged data
+    log.info('Merging scraper data into input DB')
+    download_and_merge_dbs()
 
     # campaigns
     log.info('Outputting campaign table')
@@ -38,7 +41,7 @@ def main():
         output_row(campaign_row, 'campaign')
 
     # category map
-    log.info('Outputting category_map table')
+    log.info('Outputting scraper_category_map table')
     category_map = get_category_map()
     output_category_rows(category_map)
 

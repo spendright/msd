@@ -39,8 +39,8 @@ are `campaign_id`, `company`, and `brand` (for `campaign_brand_rating`), plus
 a free-text field, `scope`, to handle things like a rating
 applying to a company's fair trand products.
 
-The various `campaign_*_map` tables are mostly for debugging; they tell
-the name that the original campaign data used for a company, brand, or category,
+The various `scraper_*_map` tables are mostly for debugging; they tell
+the name that the original source used for a company, brand, or category,
 and map it to the normalized version we've chosen.
 
 General fields

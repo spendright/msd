@@ -4,10 +4,6 @@
 - handle brand aliases, especially those that match the company name.
   For example, "HP" and "Hewlett-Packard" refer to the same brand.
   - probably need company_alias, brand_alias tables
-- infer brand ratings from company ratings & brand list, mark as such
-- filter out incorrect brands
-  - try not to use climate_counts if we can avoid it
-  - always include rated brands
 - represent subsidiary relationships
 - category hierarchy
 - match up orphaned brands to companies (e.g. Labor 411)
