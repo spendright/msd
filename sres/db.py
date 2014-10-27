@@ -22,13 +22,12 @@ from os import environ
 from os import rename
 from os import remove
 from os.path import exists
-from tempfile import NamedTemporaryFile
 from urllib import urlencode
-from urllib2 import urlopen
 
 from srs.db import TABLE_TO_KEY_FIELDS
 from srs.db import create_table_if_not_exists
 from srs.db import show_tables
+from srs.scrape import download
 
 
 DB_TO_URL = {
@@ -36,7 +35,6 @@ DB_TO_URL = {
     'companies': 'https://morph.io/spendright-scrapers/companies/data.sqlite',
 }
 
-CHUNK_SIZE = 1024
 
 MERGED_DB_FILENAME = 'merged.sqlite'
 OUTPUT_DB_TMP_FILENAME = 'data.tmp.sqlite'
@@ -100,19 +98,6 @@ def open_db(name):
         open_db._name_to_db[name] = db
 
     return open_db._name_to_db[name]
-
-
-def download(url, dest):
-    with NamedTemporaryFile(prefix=dest + '.tmp.', dir='.', delete=False) as f:
-        src = urlopen(url)
-        while True:
-            chunk = src.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            f.write(chunk)
-
-        f.close()
-        rename(f.name, dest)
 
 
 def open_output_db():
