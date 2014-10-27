@@ -19,8 +19,8 @@ import logging
 from .db import select_brands
 from .norm import fix_bad_chars
 from .norm import group_by_keys
-from .norm import merge_dicts
 from .norm import norm_with_variants
+from .url import merge_with_url_data
 
 
 BRAND_CORRECTIONS = {
@@ -115,7 +115,7 @@ def get_brands_for_company(keys):
         for br in brand_row_group:
             brand_map[(br['scraper_id'], br['brand'])] = brand
 
-        brand_row = merge_dicts(brand_row_group)
+        brand_row = merge_with_url_data(brand_row_group)
         brand_row['brand'] = brand
         del brand_row['scraper_id']
 

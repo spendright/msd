@@ -12,6 +12,7 @@ from sres.db import close_output_db
 from sres.db import init_output_db
 from sres.db import download_and_merge_dbs
 from sres.db import select_all_campaigns
+from sres.url import merge_with_url_data
 
 
 log = logging.getLogger('scraper')
@@ -38,6 +39,7 @@ def main():
     log.info('Outputting campaign table')
     for campaign_row in select_all_campaigns():
         log.info(u'campaign: {}'.format(campaign_row['campaign_id']))
+        campaign_row = merge_with_url_data(campaign_row)
         output_row(campaign_row, 'campaign')
 
     # category map

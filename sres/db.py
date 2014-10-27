@@ -41,6 +41,8 @@ INPUT_DB_NAME = 'input'
 
 OUTPUT_DB_NAME = DEFAULT_DB_NAME + '.tmp'
 
+URLS_DB_NAME = 'urls'
+
 log = logging.getLogger(__name__)
 
 
@@ -110,6 +112,15 @@ def open_output_dt():
         open_output_dt._dt = open_dt(OUTPUT_DB_NAME)
 
     return open_output_dt._dt
+
+
+def open_urls_db():
+    """Open urls.sqlite, downloading it if necessary."""
+    if not hasattr(open_urls_db, '_db'):
+        download_db(URLS_DB_NAME)
+        open_urls_db._db = open_db(URLS_DB_NAME)
+
+    return open_urls_db._db
 
 
 def output_row(row, table):
@@ -243,3 +254,16 @@ def select_brand_categories(scraper_id, company, brand):
                         [scraper_id, company, brand])
 
     return [clean_row(row) for row in cursor]
+
+
+def select_url(url):
+    db = open_urls_db()
+
+    cursor = db.execute('SELECT * from url WHERE url = ?', [url])
+
+    row = cursor.fetchone()
+
+    if row:
+        return clean_row(row)
+    else:
+        return None

@@ -28,9 +28,9 @@ from .db import select_company_ratings
 from .db import select_company
 from .norm import fix_bad_chars
 from .norm import group_by_keys
-from .norm import merge_dicts
 from .norm import norm_with_variants
 from .norm import simplify_whitespace
+from .url import merge_with_url_data
 
 log = logging.getLogger(__name__)
 
@@ -252,7 +252,7 @@ def handle_matched_company(cd, category_map):
     company_row = {}
 
     for scraper_id, company in sorted(cd['keys']):
-         company_row.update(select_company(scraper_id, company))
+        company_row.update(select_company(scraper_id, company))
 
     del company_row['scraper_id']  # should be at least one match
 
@@ -388,7 +388,7 @@ def match_companies(companies_with_scraper_ids=None, aliases=None):
 
     # and merge them together
     for cd_group in group_by_keys(to_merge, keyfunc):
-        merged = merge_dicts(cd_group)
+        merged = merge_with_url_data(cd_group)
 
         if not merged['keys'] and merged['display_names']:
             # this can happen if hard-coded variants don't match anything
