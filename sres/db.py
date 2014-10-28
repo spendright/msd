@@ -48,12 +48,12 @@ URLS_DB_NAME = 'urls'
 log = logging.getLogger(__name__)
 
 
-def download_and_merge_dbs():
+def download_and_merge_dbs(force=False):
     """Download the various scraper DBs and merge into a single
     "input" DB."""
     # if input DB already exists and all its deps are up-to-date, we're done
     input_db_path = get_db_path(INPUT_DB_NAME)
-    if exists(input_db_path):
+    if exists(input_db_path) and not force:
         mtime = getmtime(input_db_path)
         if all(exists(db_path) and getmtime(db_path) < mtime for db_path
                in (get_db_path(db_name) for db_name in SOURCE_DBS)):
@@ -68,7 +68,7 @@ def download_and_merge_dbs():
     dt = open_dt(INPUT_DB_TMP_NAME)
 
     for src_db_name in sorted(SOURCE_DBS):
-        download_db(src_db_name)
+        download_db(src_db_name, force=force)
         src_db = open_db(src_db_name)
 
         for table in show_tables(src_db):

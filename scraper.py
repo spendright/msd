@@ -34,7 +34,7 @@ def main():
 
     # create merged data
     log.info('Merging scraper data into input DB')
-    download_and_merge_dbs()
+    download_and_merge_dbs(force=opts.force)
 
     # campaigns
     log.info('Outputting campaign table')
@@ -72,6 +72,9 @@ def parse_args(args=None):
     parser.add_argument(
         '-q', '--quiet', dest='quiet', default=False, action='store_true',
         help='Turn off info logging')
+    parser.add_argument(
+        '-f', '--force', dest='force', default=False, action='store_true',
+        help='Force download of DBs and building of merged DB')
 
     return parser.parse_args(args)
 
