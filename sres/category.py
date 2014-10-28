@@ -29,12 +29,18 @@ from .norm import merge_dicts
 from .norm import simplify_whitespace
 
 
+# too vague to be useful
 BAD_CATEGORIES = {
     'Commercial Products',
     'Industry Innovators',
     'Other',
 }
 
+# not useful
+BAD_SUFFIXES = [
+    ' Brands',
+    ' Products',
+]
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +51,10 @@ def fix_category(category, scraper_id):
     category = simplify_whitespace(category)
     category = titlecase(category)
 
-    if category.endswith(' Brands'):
-        category = category[:-7]
+    for suffix in BAD_SUFFIXES:
+        if category.endswith(suffix):
+            category = category[:-len(suffix)]
+            break
 
     if not category or category in BAD_CATEGORIES:
         return None
@@ -179,6 +187,7 @@ def _pick_cat_parents(cat_to_parents):
         descendants = cat_to_descendants[cat]
 
         for parent in sorted(parents):
+            # can end up with cats listed as their own parent due to renames
             if parent != cat and parent not in descendants:
                 cat_to_parent[cat] = parent
                 break
