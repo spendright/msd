@@ -3,7 +3,8 @@ from argparse import ArgumentParser
 from os import environ
 
 from sres.category import get_category_map
-from sres.category import output_category_rows
+from sres.category import output_scraper_category_map
+from sres.category import output_category_hierarchy
 from sres.company import match_companies
 from sres.company import name_company
 from sres.company import handle_matched_company
@@ -45,7 +46,11 @@ def main():
     # category map
     log.info('Outputting scraper_category_map table')
     category_map = get_category_map()
-    output_category_rows(category_map)
+    output_scraper_category_map(category_map)
+
+    # category
+    output_category_hierarchy(category_map)
+    log.info('Outputting category table')
 
     # everything else
     log.info('Matching up companies')

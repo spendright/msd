@@ -19,6 +19,7 @@ import logging
 from os import rename
 from os import remove
 from os.path import exists
+from os.path import getmtime
 
 from srs.db import DEFAULT_DB_NAME
 from srs.db import TABLE_TO_KEY_FIELDS
@@ -38,6 +39,7 @@ SOURCE_DBS = {
 CAMPAIGNS_PREFIX = 'campaigns:'
 
 INPUT_DB_NAME = 'input'
+INPUT_DB_TMP_NAME = INPUT_DB_NAME + '.tmp'
 
 OUTPUT_DB_NAME = DEFAULT_DB_NAME + '.tmp'
 
@@ -49,13 +51,21 @@ log = logging.getLogger(__name__)
 def download_and_merge_dbs():
     """Download the various scraper DBs and merge into a single
     "input" DB."""
+    # if input DB already exists and all its deps are up-to-date, we're done
     input_db_path = get_db_path(INPUT_DB_NAME)
     if exists(input_db_path):
-        log.debug('Removing old version of {}'.format(input_db_path))
-        remove(input_db_path)
+        mtime = getmtime(input_db_path)
+        if all(exists(db_path) and getmtime(db_path) < mtime for db_path
+               in (get_db_path(db_name) for db_name in SOURCE_DBS)):
+            return
 
-    db = open_db(INPUT_DB_NAME)
-    dt = open_dt(INPUT_DB_NAME)
+    input_db_tmp_path = get_db_path(INPUT_DB_TMP_NAME)
+    if exists(input_db_tmp_path):
+        log.debug('Removing old version of {}'.format(input_db_tmp_path))
+        remove(input_db_tmp_path)
+
+    db = open_db(INPUT_DB_TMP_NAME)
+    dt = open_dt(INPUT_DB_TMP_NAME)
 
     for src_db_name in sorted(SOURCE_DBS):
         download_db(src_db_name)
@@ -75,6 +85,12 @@ def download_and_merge_dbs():
                 scraper_id = '{}:{}'.format(src_db_name, row['scraper_id'])
                 row = dict(row, scraper_id=scraper_id)
                 dt.upsert(row, table)
+
+    log.info('closing {} and moving to {}'.format(
+        input_db_tmp_path, input_db_path))
+    db.close()
+    dt.close()
+    rename(input_db_tmp_path, input_db_path)
 
 
 def open_input_db():
@@ -217,14 +233,11 @@ def select_all_campaigns():
             db.execute('SELECT * FROM campaign ORDER BY campaign_id')]
 
 
-def select_all_categories():
+def select_categories():
     db = open_input_db()
 
-    for scraper_id, category in db.execute(
-            'SELECT scraper_id, category FROM brand_category UNION '
-            'SELECT scraper_id, category FROM company_category'
-            ' GROUP BY category'):
-        yield scraper_id, category
+    return [clean_row(row) for row in
+            db.execute('SELECT * FROM category ORDER BY scraper_id, category')]
 
 
 def select_all_companies():

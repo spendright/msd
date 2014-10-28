@@ -20,7 +20,7 @@ from collections import defaultdict
 from titlecase import titlecase
 
 from .db import output_row
-from .db import select_all_categories
+from .db import select_categories
 from .db import select_brand_categories
 from .db import select_company_categories
 from .norm import fix_bad_chars
@@ -34,6 +34,7 @@ BAD_CATEGORIES = {
     'Industry Innovators',
     'Other',
 }
+
 
 log = logging.getLogger(__name__)
 
@@ -56,17 +57,17 @@ def fix_category(category, scraper_id):
 def get_category_map():
     key_to_category = {}
 
-    for scraper_id, scraper_category in select_all_categories():
-        category = fix_category(scraper_category, scraper_id)
+    for row in select_categories():
+        category = fix_category(row['category'], row['scraper_id'])
         if category is None:
             continue
 
-        key_to_category[(scraper_id, scraper_category)] = category
+        key_to_category[(row['scraper_id'], row['category'])] = category
 
     return key_to_category
 
 
-def output_category_rows(category_map):
+def output_scraper_category_map(category_map):
     category_to_keys = defaultdict(set)
     for key, category in category_map.iteritems():
         category_to_keys[category].add(key)
@@ -90,7 +91,7 @@ def get_company_categories(company, keys, category_map):
     for scraper_id, scraper_company in keys:
         category_rows.extend(_map_categories(
             select_company_categories(scraper_id, scraper_company),
-            scraper_id, category_map))
+            category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
@@ -107,7 +108,7 @@ def get_brand_categories(company, brand, keys, category_map):
             scraper_id, scraper_company, scraper_brand)
 
         category_rows.extend(_map_categories(
-            brand_category_rows, scraper_id, category_map))
+            brand_category_rows, category_map))
 
     for cr_group in group_by_keys(
             category_rows, keyfunc=lambda cr: [cr['category']]):
@@ -115,20 +116,88 @@ def get_brand_categories(company, brand, keys, category_map):
         yield _fix_category_row(row, company, brand)
 
 
-def _map_categories(rows, scraper_id, category_map):
+def _map_categories(rows, category_map):
     for row in rows:
-        category = category_map.get((scraper_id, row['category']))
-        if not category:  # bad category like "Other"
+        for k in row:
+            if k == 'category' or k.endswith('_category'):
+                row[k] = category_map.get((row['scraper_id'], row.get(k)))
+
+        if not row.get('category'):  # bad category like "Other"
             continue
-        row['category'] = category
 
         yield row
 
-def _fix_category_row(row, company, brand=None):
+def _fix_category_row(row, company=None, brand=None, category_map=None):
     del row['scraper_id']
 
-    row['company'] = company
+    if company is not None:
+        row['company'] = company
     if brand is not None:
         row['brand'] = brand
 
     return row
+
+
+def output_category_hierarchy(category_map):
+    cat_to_rows = defaultdict(list)
+    cat_to_parents = defaultdict(set)
+
+    # map category rows
+    for cat_row in _map_categories(select_categories(), category_map):
+        cat = cat_row['category']
+        cat_to_rows[cat].append(cat_row)
+
+        parent_cat = cat_row.get('parent_category')
+        if parent_cat:
+            cat_to_parents[cat].add(parent_cat)
+
+    cat_to_parent = _pick_cat_parents(cat_to_parents)
+
+    for cat, rows in sorted(cat_to_rows.items()):
+        cat_row = merge_dicts(rows)
+        cat_row['parent_category'] = cat_to_parent.get(cat)
+
+        ancestry = _get_ancestry(cat, cat_to_parent)
+        log.info(u' < '.join(reversed(ancestry)))
+
+        cat_row['depth'] = len(ancestry) - 1
+
+        for i, ancestor in enumerate(ancestry):
+            cat_row['ancestor_category_{}'.format(i)] = ancestor
+
+        output_row(cat_row, 'category')
+
+
+def _pick_cat_parents(cat_to_parents):
+    """Take a map from category to parents, and return a map from
+    category to a single parent. Choose parents in a way that there
+    are no loops."""
+    cat_to_parent = {}
+    cat_to_descendants = defaultdict(set)
+
+    for cat, parents in sorted(cat_to_parents.items()):
+        descendants = cat_to_descendants[cat]
+
+        for parent in sorted(parents):
+            if parent != cat and parent not in descendants:
+                cat_to_parent[cat] = parent
+                break
+
+        # update descendants
+        while cat in cat_to_parent:
+            parent = cat_to_parent[cat]
+            cat_to_descendants[parent].add(cat)
+            cat_to_descendants[parent].update(cat_to_descendants[cat])
+            cat = parent
+
+    return cat_to_parent
+
+
+def _get_ancestry(cat, cat_to_parent):
+    ancestry = []
+
+    while cat:
+        ancestry.insert(0, cat)
+        cat = cat_to_parent.get(cat)
+
+    return ancestry
