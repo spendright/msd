@@ -140,7 +140,14 @@ def open_urls_db():
 
 
 def output_row(row, table):
+    """Output row to the given table. Also remove empty fields
+    and remove the scraper_id field if the table name doesn't
+    start with "scraper_".
+    """
     row = clean_row(row)
+    if 'scraper_id' in row and not table.startswith('scraper_'):
+        del row['scraper_id']
+
     log.debug('{}: {}'.format(table, repr(row)))
 
     dt = open_output_dt()

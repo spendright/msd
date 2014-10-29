@@ -274,7 +274,7 @@ def handle_matched_company(cd, category_map):
         for rating_row in select_company_ratings(
                 scraper_id, scraper_company):
             rating_row['company'] = company_canonical
-            output_row(rating_row, 'scraper_company_rating')
+            output_row(rating_row, 'campaign_company_rating')
 
     # store company categories
     for cat_row in get_company_categories(
@@ -309,7 +309,7 @@ def handle_matched_company(cd, category_map):
                 scraper_id, scraper_company, scraper_brand):
             rating_row['company'] = company_canonical
             rating_row['brand'] = brand_canonical
-            output_row(rating_row, 'scraper_brand_rating')
+            output_row(rating_row, 'campaign_brand_rating')
 
     # store brand categories
     for brand_canonical, keys in sorted(brand_to_keys.items()):
