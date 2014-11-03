@@ -17,8 +17,6 @@
 import logging
 from collections import defaultdict
 
-from titlecase import titlecase
-
 from .db import output_row
 from .db import select_categories
 from .db import select_brand_categories
@@ -27,6 +25,7 @@ from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import simplify_whitespace
+from .norm import to_title_case
 
 
 # too vague to be useful
@@ -49,7 +48,7 @@ def fix_category(category, scraper_id):
     category = fix_bad_chars(category)
     category = category.replace('&', ' and ')
     category = simplify_whitespace(category)
-    category = titlecase(category)
+    category = to_title_case(category)
 
     for suffix in BAD_SUFFIXES:
         if category.endswith(suffix):

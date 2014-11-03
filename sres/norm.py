@@ -15,6 +15,8 @@
 #   limitations under the License.
 """General utilities for merging and normalization."""
 import re
+
+from titlecase import titlecase
 from unidecode import unidecode
 
 # use this to turn e.g. "babyGap" into "baby Gap"
@@ -117,3 +119,10 @@ def merge_dicts(ds):
                     result[k] = v
 
     return result
+
+
+def to_title_case(s):
+    """Like titlecase.titlecase(), but treat hyphens as spaces."""
+    return ''.join(
+        '-' if s[i] == '-' else c
+        for i, c in enumerate(titlecase(s.replace('-', ' '))))
