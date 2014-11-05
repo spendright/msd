@@ -221,6 +221,7 @@ UNSTRIPPABLE_COMPANY_TYPES = {
 
 UNSTRIPPABLE_COMPANIES = {
     'Globe International',
+    'News Corporation',
     'Woolworths Limited',
 }
 
