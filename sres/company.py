@@ -390,7 +390,7 @@ def match_companies(companies_with_scraper_ids=None, aliases=None):
     for cd_group in group_by_keys(to_merge, keyfunc):
         merged = merge_with_url_data(cd_group)
 
-        if not merged['keys'] and merged['display_names']:
+        if not (merged['keys'] and merged['display_names']):
             # this can happen if hard-coded variants don't match anything
             log.warn('orphaned company dict: {}'.format(repr(merged)))
         else:
