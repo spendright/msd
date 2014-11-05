@@ -26,6 +26,7 @@ from .url import merge_with_url_data
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
     'Taylormade - Adidas Golf': 'Taylormade',
+    'Wendys': "Wendy's",
 }
 
 # incorrect brand information for particular scrapers
@@ -45,6 +46,7 @@ IGNORE_BRANDS = {
         'Liz Claiborne': None,  # sold most brands, now Kate Spade & Company
         'News Corporation': None,  # recently split
         'Sony': None,
+        "Wendy's": None,  # used to be part of a conglomerate, now just Wendy's
         'eBay': {'GE'},  # ???
     },
     'campaigns:free2work': {
