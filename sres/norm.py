@@ -115,7 +115,9 @@ def merge_dicts(ds):
                     result[k].update(v)
                 elif hasattr(result[k], 'extend'):
                     result[k].extend(v)
-                elif v != '' or result[k] is None:
+                elif result[k] is None:
+                    result[k] = v
+                elif result[k] == '' and v != '':
                     result[k] = v
 
     return result
