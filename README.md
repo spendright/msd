@@ -11,7 +11,7 @@ same way across campaigns. Eventually, we'll also merge in master
 company data scraped directly from company websites.
 
 This is a project of [SpendRight](http://spendright.org). You can contact
-the author (David Marin) at dave@spendright.org.
+the author (SpendRight, Inc.) at dave@spendright.org.
 
 
 Data format
