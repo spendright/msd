@@ -167,7 +167,7 @@ def output_category_hierarchy(category_map):
         ancestry = _get_ancestry(cat, cat_to_parent)
         log.info(u' < '.join(reversed(ancestry)))
 
-        cat_row['depth'] = len(ancestry) - 1
+        cat_row['category_depth'] = len(ancestry) - 1
 
         for i, ancestor in enumerate(ancestry):
             cat_row['ancestor_category_{}'.format(i)] = ancestor
