@@ -468,18 +468,18 @@ def get_company_name_variants(company):
 
     handle(company)
 
-    # don't allow single-character names
-    display_variants = set(dv for dv in display_variants if len(dv) > 1)
-    matching_variants = set(mv for mv in matching_variants if len(mv) > 1)
-
     # display variants are always good for matching too
     matching_variants.update(display_variants)
 
     # handle slashes in company names
     for mv in list(matching_variants):
-        if '/' in mv:
+        if '/' in mv and not COMPANY_TYPE_RE.match(mv):  # don't split A/S
             matching_variants.update(
                 filter(None, (part.strip() for part in mv.split('/'))))
+
+    # don't allow single-character names (would also catch A/S)
+    display_variants = set(dv for dv in display_variants if len(dv) > 1)
+    matching_variants = set(mv for mv in matching_variants if len(mv) > 1)
 
     return display_variants, matching_variants
 
