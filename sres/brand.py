@@ -96,6 +96,7 @@ def get_brands_for_company(keys):
 
         for brand_row in select_brands(scraper_id, company):
             if brand_row['brand'] not in ignore:
+                brand_row['brand'] = fix_brand(brand_row['brand'])
                 brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
@@ -139,7 +140,4 @@ def pick_brand_name(variants):
                 v[0],
                 sum(1 for c in v if c.upper() == c))
 
-    variants = [fix_brand(v) for v in variants]
-    variants.sort(key=keyfunc, reverse=True)
-
-    return variants[0]
+    return sorted(variants, key=keyfunc, reverse=True)[0]
