@@ -63,6 +63,7 @@ DEFUNCT_COMPANIES = {
     'Armor Holdings',  # acquired by BAE Systems in 2007, integrated
     'Jones Apparel Group',  # acquired by Nine West Inc.
     'The Jones Group',  # another name for Jones Apparel Group
+    'News Corporation',  # split into News Corp, 21st Century Fox
 }
 
 COMPANY_ALIASES = [
@@ -91,6 +92,21 @@ COMPANY_ALIASES = [
     ['Wibra', 'Wibra Supermarkt'],
 ]
 
+# always keep this suffix on the company name
+UNSTRIPPABLE_COMPANY_TYPES = {
+    'LLP',
+}
+
+# don't use the regexes below to shorten these company names
+UNSTRIPPABLE_COMPANIES = {
+    'Globe International',
+    'Woolworths Limited',
+}
+
+# don't shorten company names to these
+BAD_COMPANY_VARIANTS = {
+    'News',  # e.g. News Corporation, News Corp.
+}
 
 # "The X Co." -- okay to strip
 THE_X_CO_RE = re.compile(
@@ -213,16 +229,6 @@ COMPANY_TYPE_CORRECTIONS = {
     'gmbh': 'GmbH',
     'inc': 'Inc',
     'nv': 'N.V.',
-}
-
-UNSTRIPPABLE_COMPANY_TYPES = {
-    'LLP',
-}
-
-UNSTRIPPABLE_COMPANIES = {
-    'Globe International',
-    'News Corporation',
-    'Woolworths Limited',
 }
 
 
@@ -373,6 +379,7 @@ def match_companies(companies_with_scraper_ids=None, aliases=None):
     for scraper_id, company in companies_with_scraper_ids:
         if not company:  # skip blank company names
             continue
+
         keys = {(scraper_id, company)}
 
         display, matching = get_company_name_variants(company)
@@ -420,13 +427,15 @@ def get_company_name_variants(company):
     display_variants = set()  # usable as display name
     matching_variants = set()  # usable for matching
 
+    # putting this in a sub-function so we can bail out easily with "return"
     def handle(company):
         company = simplify_whitespace(company)
 
         company = COMPANY_CORRECTIONS.get(company) or company
 
+        # if it's a name like Foo, Inc., allow "Foo" as a display variant
         m = COMPANY_TYPE_RE.match(company)
-        if m:
+        if m and m.group('company') not in BAD_COMPANY_VARIANTS:
             company = m.group('company')
             intl1 = m.group('intl1') or ''
             c_type = m.group('type')
@@ -435,23 +444,27 @@ def get_company_name_variants(company):
             c_full = company + intl1 + ' ' + c_type + intl2
             display_variants.add(c_full)
 
+            # if the "Inc." etc. is part of the name, stop here
             if (c_type in UNSTRIPPABLE_COMPANY_TYPES or
                 c_full in UNSTRIPPABLE_COMPANIES):
                 return
 
+        # at this point, company is either the original name, or
+        # the name with "Inc." etc. stripped off
         display_variants.add(company)
 
-        for regex in COMPANY_DISPLAY_REGEXES:
-            m = regex.match(company)
-            if m:
-                display_variants.add(m.group('company'))
-                return
-
-        for regex in COMPANY_MATCHING_REGEXES:
-            m = regex.match(company)
-            if m:
-                matching_variants.add(m.group('company'))
-                return
+        # add one more variant, which may be for matching only. This
+        # handles things that are less obviously corporate suffixes, like
+        # "& Co." and "Group"
+        for regexes, dest in ((COMPANY_DISPLAY_REGEXES, display_variants),
+                              (COMPANY_MATCHING_REGEXES, matching_variants)):
+            for regex in regexes:
+                m = regex.match(company)
+                if m:
+                    variant = m.group('company')
+                    if variant not in BAD_COMPANY_VARIANTS:
+                        dest.add(variant)
+                        return
 
     handle(company)
 
@@ -459,6 +472,7 @@ def get_company_name_variants(company):
     display_variants = set(dv for dv in display_variants if len(dv) > 1)
     matching_variants = set(mv for mv in matching_variants if len(mv) > 1)
 
+    # display variants are always good for matching too
     matching_variants.update(display_variants)
 
     # handle slashes in company names
