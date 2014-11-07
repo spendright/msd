@@ -25,7 +25,7 @@ from .url import merge_with_url_data
 
 BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
-    'Taylormade - Adidas Golf': 'Taylormade',
+    'Taylormade - Adidas Golf': 'TaylorMade',
     'Wendys': "Wendy's",
 }
 
