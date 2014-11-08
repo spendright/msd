@@ -30,6 +30,7 @@ from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import norm_with_variants
 from .norm import simplify_whitespace
+from .rating import merge_ratings
 from .url import merge_with_url_data
 
 log = logging.getLogger(__name__)
@@ -270,6 +271,8 @@ def handle_matched_company(cd, category_map):
     output_row(company_row, 'company')
 
     # store company map and ratings
+    company_rating_rows = []
+
     for scraper_id, scraper_company in cd['keys']:
         # map
         map_row = dict(
@@ -277,11 +280,14 @@ def handle_matched_company(cd, category_map):
             company=company_canonical)
         output_row(map_row, 'scraper_company_map')
 
-        # ratings (may be more than one because of `scope`)
-        for rating_row in select_company_ratings(
-                scraper_id, scraper_company):
-            rating_row['company'] = company_canonical
-            output_row(rating_row, 'campaign_company_rating')
+        # collect ratings
+        for row in select_company_ratings(scraper_id, scraper_company):
+            row['company'] = company_canonical
+            company_rating_rows.append(row)
+
+    # output ratings
+    for company_rating_row in merge_ratings(company_rating_rows):
+        output_row(company_rating_row, 'campaign_company_rating')
 
     # store company categories
     for cat_row in get_company_categories(
@@ -297,6 +303,7 @@ def handle_matched_company(cd, category_map):
     # store brand map, rating
     scraper_to_company = dict(cd['keys'])
     brand_to_keys = defaultdict(set)
+    brand_rating_rows = []
 
     for (scraper_id, scraper_brand), brand_canonical in brand_map.items():
         scraper_company = scraper_to_company[scraper_id]
@@ -311,12 +318,16 @@ def handle_matched_company(cd, category_map):
             brand=brand_canonical)
         output_row(map_row, 'scraper_brand_map')
 
-        # ratings
-        for rating_row in select_brand_ratings(
+        # collect ratings
+        for row in select_brand_ratings(
                 scraper_id, scraper_company, scraper_brand):
-            rating_row['company'] = company_canonical
-            rating_row['brand'] = brand_canonical
-            output_row(rating_row, 'campaign_brand_rating')
+            row['company'] = company_canonical
+            row['brand'] = brand_canonical
+            brand_rating_rows.append(row)
+
+    # output ratings
+    for brand_rating_row in merge_ratings(brand_rating_rows):
+        output_row(brand_rating_row, 'campaign_company_rating')
 
     # store brand categories
     for brand_canonical, keys in sorted(brand_to_keys.items()):
