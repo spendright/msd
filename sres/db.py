@@ -150,6 +150,9 @@ def output_row(row, table):
 
     log.debug('{}: {}'.format(table, repr(row)))
 
+    db = open_output_db()
+    create_table_if_not_exists(table, db=db)
+
     dt = open_output_dt()
     dt.upsert(row, table)
 
