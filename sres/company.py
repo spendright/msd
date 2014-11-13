@@ -327,7 +327,7 @@ def handle_matched_company(cd, category_map):
 
     # output ratings
     for brand_rating_row in merge_ratings(brand_rating_rows):
-        output_row(brand_rating_row, 'campaign_company_rating')
+        output_row(brand_rating_row, 'campaign_brand_rating')
 
     # store brand categories
     for brand_canonical, keys in sorted(brand_to_keys.items()):
