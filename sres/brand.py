@@ -27,6 +27,7 @@ BRAND_CORRECTIONS = {
     # this is actually the name of a subsidary
     'Taylormade - Adidas Golf': 'TaylorMade',
     'Wendys': "Wendy's",
+    '7 Up': '7UP',
 }
 
 # incorrect brand information for particular scrapers
