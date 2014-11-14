@@ -16,10 +16,11 @@
 """Utilities for merging brand information."""
 import logging
 
+from srs.norm import smunch
+
 from .db import select_brands
 from .norm import fix_bad_chars
 from .norm import group_by_keys
-from .norm import norm_with_variants
 from .url import merge_with_url_data
 
 
@@ -101,7 +102,7 @@ def get_brands_for_company(keys):
                 brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
-        return norm_with_variants(brand_row['brand'])
+        return smunch(brand_row['brand'])
 
     brand_to_row = {}
     brand_map = {}
