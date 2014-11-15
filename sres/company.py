@@ -73,6 +73,7 @@ COMPANY_ALIASES = [
     ['ASUS', 'ASUSTeK Computer'],
     ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
     ['Gap', 'The Gap'],  # might solve this with "Gap" brand?
+    ['GE', 'General Electric'],
     ['HP', 'Hewlett-Packard'],
     ['HTC Electronics', 'HTC'],
     ['Illy', u'illycaffè'],
@@ -84,6 +85,7 @@ COMPANY_ALIASES = [
     ['Merck', 'Schering-Plough'],  # merged into Merck
     ['New Look', 'New Look Retailers'],
     ['Philips', 'Royal Philips', 'Royal Philips Electronics'],
+    ['PVH', 'Phillips Van Heusen'],
     ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
     # technically, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
     # the multinational. Not worrying about this now and I don't think this is

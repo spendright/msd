@@ -41,6 +41,7 @@ IGNORE_BRANDS = {
         'Coca-Cola Company': None,
         'ConAgra Foods': None,
         'ExpressJet': None,
+        'General Electric': None,
         'General Mills': None,
         'Groupe Danone': {'LU'},  # sold in 2007
         'Hillshire': None,
