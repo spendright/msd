@@ -14,6 +14,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """Merge and correct company information."""
+from __future__ import unicode_literals
+
 import logging
 import re
 from collections import defaultdict
@@ -41,12 +43,13 @@ COMPANY_CORRECTIONS = {
     'GEPA- The Fairtrade Company': 'GEPA - The Fairtrade Company',
     'Groupo Modelo S.A.B. de C.V.': 'Grupo Modelo S.A.B. de C.V.',
     'Hanesbrands Incorporated': 'Hanesbrands Inc.',
-    'Nescafe': u'Nestlé',  # Nescafé is a brand, not a company
+    'Nescafe': 'Nestlé',  # Nescafé is a brand, not a company
     'PUMA AG Rudolf Dassler Sport': 'Puma SE',
     'SAB Miller': 'SABMiller',
     'V.F. Corporation': 'VF Corporation',
     'Wolverine Worldwide': 'Wolverine World Wide',
     'Woolworths Australia': 'Woolworths Limited',
+    'Chocoladefabriken Lindt & Sprungli': 'Lindt & Sprüngli AG',
 }
 
 # Name changes. May eventually want separate logic for this.
@@ -58,6 +61,7 @@ COMPANY_CORRECTIONS.update({
     'Sweet Earth Chocolates': 'Mama Ganache',  # renamed in 2012
     'RIM': 'BlackBerry Limited', # renamed in 2013
     'Research In Motion': 'BlackBerry Limited',
+    'Lindt & Sprüngli GmbH': 'Lindt & Sprüngli AG',  # changed corporate form
 })
 
 DEFUNCT_COMPANIES = {
@@ -76,10 +80,11 @@ COMPANY_ALIASES = [
     ['GE', 'General Electric'],
     ['HP', 'Hewlett-Packard'],
     ['HTC Electronics', 'HTC'],
-    ['Illy', u'illycaffè'],
+    ['Illy', 'illycaffè'],
     ['JetBlue', 'JetBlue Airways'],
     ['Kellogg', "Kellogg's"],  # might solve this with a brand?
     ['L Brands', 'Limited Brands'],
+    ['Lindt', 'Lindt & Sprüngli'],
     ['Lidl', 'Lidl Stiftung'],
     ['LG', 'LGE', 'LG Electronics'],
     ['Merck', 'Schering-Plough'],  # merged into Merck
@@ -256,7 +261,7 @@ def handle_matched_company(cd, category_map):
     if company_canonical == company_full:
         log.info(company_canonical)
     else:
-        log.info(u'{} ({})'.format(company_canonical, company_full))
+        log.info('{} ({})'.format(company_canonical, company_full))
 
     # merge company rows
     company_row = {}
