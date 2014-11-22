@@ -25,9 +25,11 @@ from .category import get_brand_categories
 from .category import get_company_categories
 from .db import output_row
 from .db import select_all_companies
+from .db import select_brand_claims
 from .db import select_brand_ratings
-from .db import select_company_ratings
 from .db import select_company
+from .db import select_company_claims
+from .db import select_company_ratings
 from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import norm_with_variants
@@ -280,6 +282,7 @@ def handle_matched_company(cd, category_map):
     output_row(company_row, 'company')
 
     # store company map and ratings
+    company_claim_rows = []
     company_rating_rows = []
 
     for scraper_id, scraper_company in cd['keys']:
@@ -289,13 +292,38 @@ def handle_matched_company(cd, category_map):
             company=company_canonical)
         output_row(map_row, 'scraper_company_map')
 
+        # collect claims
+        for row in select_company_claims(scraper_id, scraper_company):
+            row['company'] = company_canonical
+            company_claim_rows.append(row)
+
         # collect ratings
         for row in select_company_ratings(scraper_id, scraper_company):
             row['company'] = company_canonical
             company_rating_rows.append(row)
 
-    # output ratings
-    for company_rating_row in merge_ratings(company_rating_rows):
+    # merge and index company rating rows
+    company_rating_rows = list(merge_ratings(company_rating_rows))
+    cs_to_row = dict(((row['company'], row['scope']), row)
+                     for row in company_rating_rows)
+
+    # output company claims
+    for company_claim_row in company_claim_rows:
+        # skip "claims" that don't support a judgment
+        if company_claim_row.get('judgment') is None:
+            continue
+
+        # if claim doesn't have a URL, patch in rating's URL
+        rating_row = cs_to_row.get((company_claim_row['company'],
+                                    company_claim_row['scope']))
+
+        if rating_row and not company_claim_row.get('url'):
+            company_claim_row['url'] = rating_row.get('url')
+
+        output_row(company_claim_row, 'campaign_company_claim')
+
+    # output company ratings
+    for company_rating_row in company_rating_rows:
         output_row(company_rating_row, 'campaign_company_rating')
 
     # store company categories
@@ -312,6 +340,7 @@ def handle_matched_company(cd, category_map):
     # store brand map, rating
     scraper_to_company = dict(cd['keys'])
     brand_to_keys = defaultdict(set)
+    brand_claim_rows = []
     brand_rating_rows = []
 
     for (scraper_id, scraper_brand), brand_canonical in brand_map.items():
@@ -328,14 +357,42 @@ def handle_matched_company(cd, category_map):
         output_row(map_row, 'scraper_brand_map')
 
         # collect ratings
+        for row in select_brand_claims(
+                scraper_id, scraper_company, scraper_brand):
+            row['company'] = company_canonical
+            row['brand'] = brand_canonical
+            brand_claim_rows.append(row)
+
+        # collect ratings
         for row in select_brand_ratings(
                 scraper_id, scraper_company, scraper_brand):
             row['company'] = company_canonical
             row['brand'] = brand_canonical
             brand_rating_rows.append(row)
 
-    # output ratings
-    for brand_rating_row in merge_ratings(brand_rating_rows):
+    # merge and index brand rating rows
+    brand_rating_rows = list(merge_ratings(brand_rating_rows))
+    cbs_to_row = dict(((row['company'], row['brand'], row['scope']), row)
+                      for row in brand_rating_rows)
+
+    # output brand claims
+    for brand_claim_row in brand_claim_rows:
+        # skip "claims" that don't support a judgment
+        if brand_claim_row.get('judgment') is None:
+            continue
+
+        # if claim doesn't have a URL, patch in rating's URL
+        rating_row = cbs_to_row.get((brand_claim_row['company'],
+                                     brand_claim_row['brand'],
+                                     brand_claim_row['scope']))
+
+        if rating_row and not brand_claim_row.get('url'):
+            brand_claim_row['url'] = rating_row.get('url')
+
+        output_row(brand_claim_row, 'campaign_brand_claim')
+
+    # output brand ratings
+    for brand_rating_row in brand_rating_rows:
         output_row(brand_rating_row, 'campaign_brand_rating')
 
     # store brand categories

@@ -67,6 +67,9 @@ def download_and_merge_dbs(force=False):
     db = open_db(INPUT_DB_TMP_NAME)
     dt = open_dt(INPUT_DB_TMP_NAME)
 
+    for table in TABLE_TO_KEY_FIELDS:
+        create_table_if_not_exists(table, db=db)
+
     for src_db_name in sorted(SOURCE_DBS):
         download_db(src_db_name, force=force)
         src_db = open_db(src_db_name)
@@ -77,8 +80,6 @@ def download_and_merge_dbs(force=False):
                     table, src_db_name))
 
             log.info('{}.{} -> {}'.format(src_db_name, table, input_db_path))
-
-            create_table_if_not_exists(table, db=db)
 
             for row in src_db.execute('SELECT * FROM `{}`'.format(table)):
                 # prepend db name to scraper ID
@@ -194,6 +195,22 @@ def select_brands(scraper_id, company):
     return [clean_row(row) for row in cursor]
 
 
+def select_brand_claims(scraper_id, company, brand):
+    # campaign_id is derived from scraper_id
+    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
+        return []
+    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
+
+    db = open_input_db()
+
+    return [clean_row(row) for row in
+            db.execute(
+                'SELECT * FROM campaign_brand_claim WHERE'
+                ' scraper_id = ? AND campaign_id = ?'
+                ' AND company = ? AND brand = ?',
+                [scraper_id, campaign_id, company, brand])]
+
+
 def select_brand_ratings(scraper_id, company, brand):
     # campaign_id is derived from scraper_id
     if not scraper_id.startswith(CAMPAIGNS_PREFIX):
@@ -218,6 +235,22 @@ def select_company(scraper_id, company):
         ' AND company = ?', [scraper_id, company])
 
     return clean_row(cursor.fetchone())
+
+
+def select_company_claims(scraper_id, company):
+    # campaign_id is derived from scraper_id
+    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
+        return []
+    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
+
+    db = open_input_db()
+
+    return [clean_row(row) for row in
+            db.execute(
+                'SELECT * FROM campaign_company_claim WHERE'
+                ' scraper_id = ? AND campaign_id = ?'
+                ' AND company = ?',
+                [scraper_id, campaign_id, company])]
 
 
 def select_company_ratings(scraper_id, company):
