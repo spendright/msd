@@ -42,7 +42,17 @@ def group_by_keys(items, keyfunc):
     key_to_group = {}
 
     for item in items:
-        keys = set(keyfunc(item))
+        keys = keyfunc(item)
+
+        # strings are also sequences of characters, but that's almost
+        # certainly not what we mean
+        if isinstance(keys, basestring):
+            raise TypeError(
+                '{} is not a valid set of keys (did you mean {}?)'.format(
+                    repr(keys), repr([keys])))
+
+        keys = set(keys)
+
 
         group = {'keys': keys.copy(), 'items': [item]}
 

@@ -77,7 +77,6 @@ def fix_brand(brand):
 def get_brands_for_company(keys):
     """Given keys, a list of (scraper_id, company), return a dictionary
     mapping canonical brand name to information about that brand."""
-
     # we'll eventually need the ability to choose a master list
     # of brands (so we can ignore brands that a campaign wrongly
     # assigns to a company), and be able to handle variant spellings
@@ -103,7 +102,7 @@ def get_brands_for_company(keys):
                 brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
-        return smunch(brand_row['brand'])
+        return [smunch(brand_row['brand'])]
 
     brand_to_row = {}
     brand_map = {}
