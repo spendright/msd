@@ -103,7 +103,7 @@ def get_brands_for_company(keys):
                 brand_rows.append(brand_row)
 
     def keyfunc(brand_row):
-        return smunch(brand_row['brand'])
+        return [smunch(brand_row['brand'])]
 
     brand_to_row = {}
     brand_map = {}
