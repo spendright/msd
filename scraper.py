@@ -64,8 +64,8 @@ def main():
     output_scraper_category_map(category_map)
 
     # category
-    output_category_hierarchy(category_map)
     log.info('Outputting category table')
+    cat_to_ancestors = output_category_hierarchy(category_map)
 
     # everything else
     log.info('Matching up companies')
@@ -74,7 +74,7 @@ def main():
 
     log.info('Outputting company data (all other tables)')
     for cd in cds:
-        handle_matched_company(cd, category_map)
+        handle_matched_company(cd, category_map, cat_to_ancestors)
 
     close_output_db()
 
