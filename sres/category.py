@@ -146,6 +146,9 @@ def _fix_category_row(row, company=None, brand=None, category_map=None):
 
 
 def output_category_hierarchy(category_map):
+    """Output category rows, and also return a map from category
+    to set of ancestors.
+    """
     cat_to_rows = defaultdict(list)
     cat_to_parents = defaultdict(set)
 
@@ -173,6 +176,8 @@ def output_category_hierarchy(category_map):
             cat_row['ancestor_category_{}'.format(i)] = ancestor
 
         output_row(cat_row, 'category')
+
+    return _build_cat_to_ancestors(cat_to_parent)
 
 
 def _pick_cat_parents(cat_to_parents):
@@ -209,3 +214,31 @@ def _get_ancestry(cat, cat_to_parent):
         cat = cat_to_parent.get(cat)
 
     return ancestry
+
+
+def _build_cat_to_ancestors(cat_to_parent):
+    result = {}
+
+    def handle(cat):
+        parent = cat_to_parent.get(cat)
+
+        if parent:
+            if parent not in result:
+                handle(parent)
+            result[cat] = {parent} | result.get(parent, set())
+
+    for cat in cat_to_parent:
+        handle(cat)
+
+    return result
+
+
+def get_implied_categories(cats, cat_to_ancestors):
+    cats = set(cats)
+
+    implied_cats = set()
+    for cat in cats:
+        implied_cats.update(cat_to_ancestors.get(cat) or ())
+
+    implied_cats -= cats
+    return implied_cats
