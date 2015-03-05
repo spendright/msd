@@ -135,7 +135,34 @@ def _map_categories(rows, category_map):
         yield row
 
 
-#def build_subcategory_rows(cat_to_children):
+def output_subcategories(category_map):
+    cat_to_children = defaultdict(set)
+    # tuples of parent_category, category
+    direct_subcategories = set()
+
+    # get parent_category relationships from
+    for cat_row in _map_categories(select_categories(), category_map):
+        cat = cat_row['category']
+
+        if cat_row.get('parent_category'):
+            parent_cat = cat_row['parent_category']
+
+            cat_to_children[parent_cat].add(cat)
+            if not cat_row.get('is_implied'):
+                direct_subcategories.add((parent_cat, cat))
+
+    # TODO: use subcategory table from scrapers, once it exists
+
+    cat_to_ancestors = _imply_category_ancestors(cat_to_children)
+
+    for cat, ancestors in cat_to_ancestors.iteritems():
+        for ancestor in ancestors:
+            subcat_row = {'category': ancestor, 'subcategory': cat}
+            if (ancestor, cat) not in direct_subcategories:
+                subcat_row['is_implied'] = 1
+
+            output_row(subcat_row, 'subcategory')
+
 
 def _imply_category_ancestors(cat_to_children):
     cat_to_ancestors = defaultdict(set)
