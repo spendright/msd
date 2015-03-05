@@ -134,6 +134,38 @@ def _map_categories(rows, category_map):
 
         yield row
 
+
+#def build_subcategory_rows(cat_to_children):
+
+def _imply_category_ancestors(cat_to_children):
+    cat_to_ancestors = defaultdict(set)
+    active_cats = set(cat_to_children)
+
+    while active_cats:
+        next_active_cats = set()
+
+        for active_cat in active_cats:
+            children = cat_to_children.get(active_cat, ())
+            for child in children:
+                # don't make anything ancestor of itself
+                to_propogate = (
+                    {active_cat} | cat_to_ancestors[active_cat]) - {child}
+                child_ancestors = cat_to_ancestors[child]
+
+                if to_propogate - child_ancestors:
+                    cat_to_ancestors[child] |= to_propogate
+                    next_active_cats.add(child)
+
+        active_cats = next_active_cats
+
+    return dict((cat, ancestors)
+                for cat, ancestors in cat_to_ancestors.items()
+                if ancestors)
+
+
+# TODO: everything below will be obselete
+
+
 def _fix_category_row(row, company=None, brand=None, category_map=None):
     del row['scraper_id']
 
