@@ -283,6 +283,14 @@ def select_categories():
             db.execute('SELECT * FROM category ORDER BY scraper_id, category')]
 
 
+def select_subcategories():
+    db = open_input_db()
+
+    return [clean_row(row) for row in
+            db.execute('SELECT * FROM subcategory'
+                       ' ORDER BY scraper_id, category, subcategory')]
+
+
 def select_all_companies():
     db = open_input_db()
 

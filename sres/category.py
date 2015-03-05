@@ -18,15 +18,15 @@ import logging
 from collections import defaultdict
 
 from .db import output_row
-from .db import select_categories
 from .db import select_brand_categories
+from .db import select_categories
 from .db import select_company_categories
+from .db import select_subcategories
 from .norm import fix_bad_chars
 from .norm import group_by_keys
 from .norm import merge_dicts
 from .norm import simplify_whitespace
 from .norm import to_title_case
-
 
 # too vague to be useful
 BAD_CATEGORIES = {
@@ -135,24 +135,41 @@ def _map_categories(rows, category_map):
         yield row
 
 
-def output_subcategories(category_map):
+def output_category_and_subcategory_tables(category_map):
+    cat_to_rows = defaultdict(list)
     cat_to_children = defaultdict(set)
     # tuples of parent_category, category
     direct_subcategories = set()
 
-    # get parent_category relationships from
-    for cat_row in _map_categories(select_categories(), category_map):
-        cat = cat_row['category']
+    # read category table
+    for row in _map_categories(select_categories(), category_map):
+        cat = row['category']
+        cat_to_rows[cat].append(row)
 
-        if cat_row.get('parent_category'):
-            parent_cat = cat_row['parent_category']
+        if row.get('parent_category'):
+            parent_cat = row['parent_category']
 
             cat_to_children[parent_cat].add(cat)
-            if not cat_row.get('is_implied'):
-                direct_subcategories.add((parent_cat, cat))
+            direct_subcategories.add((parent_cat, cat))
 
-    # TODO: use subcategory table from scrapers, once it exists
+    # read subcategory table
+    for row in _map_categories(select_subcategories(), category_map):
+        cat = row['category']
+        subcat = row['subcategory']
 
+        cat_to_children[cat] = subcat
+        if not row.get('is_implied'):
+            direct_subcategories.add((cat, subcat))
+
+    # output category table
+    for cat, rows in sorted(cat_to_rows.items()):
+        row = merge_dicts(rows)
+        # parent_category has been replaced by subcategory table
+        row.pop('parent_category', None)
+
+        output_row(row, 'category')
+
+    # output subcategory table
     cat_to_ancestors = _imply_category_ancestors(cat_to_children)
 
     for cat, ancestors in cat_to_ancestors.iteritems():
@@ -162,6 +179,9 @@ def output_subcategories(category_map):
                 subcat_row['is_implied'] = 1
 
             output_row(subcat_row, 'subcategory')
+
+    # needed later
+    return cat_to_ancestors
 
 
 def _imply_category_ancestors(cat_to_children):
@@ -189,10 +209,6 @@ def _imply_category_ancestors(cat_to_children):
                 for cat, ancestors in cat_to_ancestors.items()
                 if ancestors)
 
-
-# TODO: everything below will be obselete
-
-
 def _fix_category_row(row, company=None, brand=None, category_map=None):
     del row['scraper_id']
 
@@ -202,94 +218,6 @@ def _fix_category_row(row, company=None, brand=None, category_map=None):
         row['brand'] = brand
 
     return row
-
-
-def output_category_hierarchy(category_map):
-    """Output category rows, and also return a map from category
-    to set of ancestors.
-    """
-    cat_to_rows = defaultdict(list)
-    cat_to_parents = defaultdict(set)
-
-    # map category rows
-    for cat_row in _map_categories(select_categories(), category_map):
-        cat = cat_row['category']
-        cat_to_rows[cat].append(cat_row)
-
-        parent_cat = cat_row.get('parent_category')
-        if parent_cat:
-            cat_to_parents[cat].add(parent_cat)
-
-    cat_to_parent = _pick_cat_parents(cat_to_parents)
-
-    for cat, rows in sorted(cat_to_rows.items()):
-        cat_row = merge_dicts(rows)
-        cat_row['parent_category'] = cat_to_parent.get(cat)
-
-        ancestry = _get_ancestry(cat, cat_to_parent)
-        log.info(u' < '.join(reversed(ancestry)))
-
-        cat_row['category_depth'] = len(ancestry) - 1
-
-        for i, ancestor in enumerate(ancestry):
-            cat_row['ancestor_category_{}'.format(i)] = ancestor
-
-        output_row(cat_row, 'category')
-
-    return _build_cat_to_ancestors(cat_to_parent)
-
-
-def _pick_cat_parents(cat_to_parents):
-    """Take a map from category to parents, and return a map from
-    category to a single parent. Choose parents in a way that there
-    are no loops."""
-    cat_to_parent = {}
-    cat_to_descendants = defaultdict(set)
-
-    for cat, parents in sorted(cat_to_parents.items()):
-        descendants = cat_to_descendants[cat]
-
-        for parent in sorted(parents):
-            # can end up with cats listed as their own parent due to renames
-            if parent != cat and parent not in descendants:
-                cat_to_parent[cat] = parent
-                break
-
-        # update descendants
-        while cat in cat_to_parent:
-            parent = cat_to_parent[cat]
-            cat_to_descendants[parent].add(cat)
-            cat_to_descendants[parent].update(cat_to_descendants[cat])
-            cat = parent
-
-    return cat_to_parent
-
-
-def _get_ancestry(cat, cat_to_parent):
-    ancestry = []
-
-    while cat:
-        ancestry.insert(0, cat)
-        cat = cat_to_parent.get(cat)
-
-    return ancestry
-
-
-def _build_cat_to_ancestors(cat_to_parent):
-    result = {}
-
-    def handle(cat):
-        parent = cat_to_parent.get(cat)
-
-        if parent:
-            if parent not in result:
-                handle(parent)
-            result[cat] = {parent} | result.get(parent, set())
-
-    for cat in cat_to_parent:
-        handle(cat)
-
-    return result
 
 
 def get_implied_categories(cats, cat_to_ancestors):
