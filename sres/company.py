@@ -321,23 +321,23 @@ def handle_matched_company(cd, category_map, cat_to_ancestors):
         if rating_row and not company_claim_row.get('url'):
             company_claim_row['url'] = rating_row.get('url')
 
-        output_row(company_claim_row, 'campaign_company_claim')
+        output_row(company_claim_row, 'claim')
 
     # output company ratings
     for company_rating_row in company_rating_rows:
-        output_row(company_rating_row, 'campaign_company_rating')
+        output_row(company_rating_row, 'rating')
 
     # store company categories
     company_cats = set()
     for cat_row in get_company_categories(
             company_canonical, cd['keys'], category_map):
         company_cats.add(cat_row['category'])
-        output_row(cat_row, 'company_category')
+        output_row(cat_row, 'categorize')
 
     for implied_cat in get_implied_categories(company_cats, cat_to_ancestors):
         output_row(dict(company=company_canonical, category=implied_cat,
                         is_implied=1),
-                   'company_category')
+                   'categorize')
 
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
@@ -397,11 +397,11 @@ def handle_matched_company(cd, category_map, cat_to_ancestors):
         if rating_row and not brand_claim_row.get('url'):
             brand_claim_row['url'] = rating_row.get('url')
 
-        output_row(brand_claim_row, 'campaign_brand_claim')
+        output_row(brand_claim_row, 'claim')
 
     # output brand ratings
     for brand_rating_row in brand_rating_rows:
-        output_row(brand_rating_row, 'campaign_brand_rating')
+        output_row(brand_rating_row, 'rating')
 
     # store brand categories
     brand_cats = set()
@@ -409,12 +409,12 @@ def handle_matched_company(cd, category_map, cat_to_ancestors):
         for cat_row in get_brand_categories(
                 company_canonical, brand_canonical, keys, category_map):
             brand_cats.add(cat_row['category'])
-            output_row(cat_row, 'brand_category')
+            output_row(cat_row, 'categorize')
 
     for implied_cat in get_implied_categories(brand_cats, cat_to_ancestors):
         output_row(dict(company=company_canonical, brand=brand_canonical,
                         category=implied_cat, is_implied=1),
-                   'brand_category')
+                   'categorize')
 
 
 def name_company(cd, brands=()):

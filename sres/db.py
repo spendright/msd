@@ -22,6 +22,7 @@ from os.path import exists
 from os.path import getmtime
 
 from srs.db import DEFAULT_DB_NAME
+from srs.db import OBSOLETE_TABLES
 from srs.db import TABLE_TO_KEY_FIELDS
 from srs.db import create_table_if_not_exists
 from srs.db import download_db
@@ -57,6 +58,8 @@ def download_and_merge_dbs(force=False):
         mtime = getmtime(input_db_path)
         if all(exists(db_path) and getmtime(db_path) < mtime for db_path
                in (get_db_path(db_name) for db_name in SOURCE_DBS)):
+            log.info('{} already exists and is up-to-date'.format(
+                input_db_path))
             return
 
     input_db_tmp_path = get_db_path(INPUT_DB_TMP_NAME)
@@ -64,11 +67,14 @@ def download_and_merge_dbs(force=False):
         log.debug('Removing old version of {}'.format(input_db_tmp_path))
         remove(input_db_tmp_path)
 
+    log.info('Merging scraper data into {}'.format(input_db_path))
+
     db = open_db(INPUT_DB_TMP_NAME)
     dt = open_dt(INPUT_DB_TMP_NAME)
 
     for table in TABLE_TO_KEY_FIELDS:
-        create_table_if_not_exists(table, db=db)
+        if table not in OBSOLETE_TABLES:
+            create_table_if_not_exists(table, db=db)
 
     for src_db_name in sorted(SOURCE_DBS):
         download_db(src_db_name, force=force)
@@ -79,13 +85,24 @@ def download_and_merge_dbs(force=False):
                 log.warn('Unknown table `{}` in {} db, skipping'.format(
                     table, src_db_name))
 
-            log.info('{}.{} -> {}'.format(src_db_name, table, input_db_path))
+            # merge company/brand tables
+            dest_table = OBSOLETE_TABLES.get(table, table)
+
+            log.info('{}.{} -> {}.{}'.format(
+                src_db_name, table, INPUT_DB_NAME, dest_table))
 
             for row in src_db.execute('SELECT * FROM `{}`'.format(table)):
                 # prepend db name to scraper ID
                 scraper_id = '{}:{}'.format(src_db_name, row['scraper_id'])
                 row = dict(row, scraper_id=scraper_id)
-                dt.upsert(row, table)
+
+                # company tables will be missing 'brand' field
+                if dest_table != table:
+                    for field in TABLE_TO_KEY_FIELDS[dest_table]:
+                        if field not in TABLE_TO_KEY_FIELDS[table]:
+                            row.setdefault(field, '')
+
+                dt.upsert(row, dest_table)
 
     log.info('closing {} and moving to {}'.format(
         input_db_tmp_path, input_db_path))
@@ -145,6 +162,9 @@ def output_row(row, table):
     and remove the scraper_id field if the table name doesn't
     start with "scraper_".
     """
+    if table in OBSOLETE_TABLES:
+        raise ValueError('obsolete table {}'.format(table))
+
     row = clean_row(row)
     if 'scraper_id' in row and not table.startswith('scraper_'):
         del row['scraper_id']
@@ -205,7 +225,7 @@ def select_brand_claims(scraper_id, company, brand):
 
     return [clean_row(row) for row in
             db.execute(
-                'SELECT * FROM campaign_brand_claim WHERE'
+                'SELECT * FROM claim WHERE'
                 ' scraper_id = ? AND campaign_id = ?'
                 ' AND company = ? AND brand = ?',
                 [scraper_id, campaign_id, company, brand])]
@@ -221,7 +241,7 @@ def select_brand_ratings(scraper_id, company, brand):
 
     return [clean_row(row) for row in
             db.execute(
-                'SELECT * FROM campaign_brand_rating WHERE'
+                'SELECT * FROM rating WHERE'
                 ' scraper_id = ? AND campaign_id = ?'
                 ' AND company = ? AND brand = ?',
                 [scraper_id, campaign_id, company, brand])]
@@ -238,35 +258,11 @@ def select_company(scraper_id, company):
 
 
 def select_company_claims(scraper_id, company):
-    # campaign_id is derived from scraper_id
-    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
-        return []
-    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
-
-    db = open_input_db()
-
-    return [clean_row(row) for row in
-            db.execute(
-                'SELECT * FROM campaign_company_claim WHERE'
-                ' scraper_id = ? AND campaign_id = ?'
-                ' AND company = ?',
-                [scraper_id, campaign_id, company])]
+    return select_brand_claims(scraper_id, company, '')
 
 
 def select_company_ratings(scraper_id, company):
-    # campaign_id is derived from scraper_id
-    if not scraper_id.startswith(CAMPAIGNS_PREFIX):
-        return []
-    campaign_id = scraper_id[len(CAMPAIGNS_PREFIX):]
-
-    db = open_input_db()
-
-    return [clean_row(row) for row in
-            db.execute(
-                'SELECT * FROM campaign_company_rating WHERE'
-                ' scraper_id = ? AND campaign_id = ?'
-                ' AND company = ?',
-                [scraper_id, campaign_id, company])]
+    return select_brand_ratings(scraper_id, company, '')
 
 
 def select_all_campaigns():
@@ -299,25 +295,19 @@ def select_all_companies():
         yield scraper_id, company
 
 
-def select_company_categories(scraper_id, company):
-    db = open_input_db()
-
-    cursor = db.execute('SELECT * from company_category'
-                        ' WHERE scraper_id = ? AND company = ?',
-                        [scraper_id, company])
-
-    return [clean_row(row) for row in cursor]
-
-
 def select_brand_categories(scraper_id, company, brand):
     db = open_input_db()
 
-    cursor = db.execute('SELECT * from brand_category'
+    cursor = db.execute('SELECT * from categorize'
                         ' WHERE scraper_id = ? AND company = ?'
                         ' AND brand = ?',
                         [scraper_id, company, brand])
 
     return [clean_row(row) for row in cursor]
+
+
+def select_company_categories(scraper_id, company):
+    return select_brand_categories(scraper_id, company, '')
 
 
 def select_url(url):

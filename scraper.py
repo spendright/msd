@@ -48,7 +48,6 @@ def main():
     init_output_db()
 
     # create merged data
-    log.info('Merging scraper data into input DB')
     download_and_merge_dbs(force=opts.force)
 
     # campaigns
