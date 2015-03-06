@@ -332,12 +332,12 @@ def handle_matched_company(cd, category_map, cat_to_ancestors):
     for cat_row in get_company_categories(
             company_canonical, cd['keys'], category_map):
         company_cats.add(cat_row['category'])
-        output_row(cat_row, 'categorize')
+        output_row(cat_row, 'category')
 
     for implied_cat in get_implied_categories(company_cats, cat_to_ancestors):
         output_row(dict(company=company_canonical, category=implied_cat,
                         is_implied=1),
-                   'categorize')
+                   'category')
 
     # store brands
     brand_rows = sorted(brand_to_row.itervalues(), key=lambda r: r['brand'])
@@ -409,12 +409,12 @@ def handle_matched_company(cd, category_map, cat_to_ancestors):
         for cat_row in get_brand_categories(
                 company_canonical, brand_canonical, keys, category_map):
             brand_cats.add(cat_row['category'])
-            output_row(cat_row, 'categorize')
+            output_row(cat_row, 'category')
 
     for implied_cat in get_implied_categories(brand_cats, cat_to_ancestors):
         output_row(dict(company=company_canonical, brand=brand_canonical,
                         category=implied_cat, is_implied=1),
-                   'categorize')
+                   'category')
 
 
 def name_company(cd, brands=()):

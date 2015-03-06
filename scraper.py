@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 from os import environ
 
 from sres.category import get_category_map
-from sres.category import output_category_and_subcategory_tables
+from sres.category import output_subcategory_table
 from sres.category import output_scraper_category_map
 from sres.company import handle_matched_company
 from sres.company import match_companies
@@ -63,8 +63,8 @@ def main():
     output_scraper_category_map(category_map)
 
     # category, subcategory
-    log.info('Outputting category and subcategory tables')
-    cat_to_ancestors = output_category_and_subcategory_tables(category_map)
+    log.info('Outputting subcategory table')
+    cat_to_ancestors = output_subcategory_table(category_map)
 
     # everything else
     log.info('Matching up companies')

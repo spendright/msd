@@ -33,7 +33,7 @@ field should contain the official
 spelling of a brand, minus the ™ or ® symbol. `company` and `brand` together
 make the unique key for a brand.
 
-The `categorize` table has one row for each category that a company/brand
+The `category` table has one row for each category that each company/brand
 is in (`brand` is set to `''` for companies).
 
 `rating` contains the meat of the

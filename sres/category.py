@@ -60,6 +60,7 @@ def fix_category(category, scraper_id):
 
 
 def get_category_map():
+    """Get a map from (scraper_id, scraper_category) to category."""
     key_to_category = {}
 
     for row in select_categories():
@@ -125,7 +126,8 @@ def _map_categories(rows, category_map):
     for row in rows:
         for k in row:
             if k == 'category' or k.endswith('_category'):
-                row[k] = category_map.get((row['scraper_id'], row.get(k)))
+                row[k] = category_map.get(
+                    (row['scraper_id'], row.get(k)))
 
         if not row.get('category'):  # bad category like "Other"
             continue
@@ -133,23 +135,10 @@ def _map_categories(rows, category_map):
         yield row
 
 
-def output_category_and_subcategory_tables(category_map):
-    cat_to_rows = defaultdict(list)
+def output_subcategory_table(category_map):
     cat_to_children = defaultdict(set)
     # tuples of (category, subcategory)
     direct_subcategories = set()
-
-    # TODO: get rid of category table
-    # read category table
-    for row in _map_categories(select_categories(), category_map):
-        cat = row['category']
-        cat_to_rows[cat].append(row)
-
-        if row.get('parent_category'):
-            parent_cat = row['parent_category']
-
-            cat_to_children[parent_cat].add(cat)
-            direct_subcategories.add((parent_cat, cat))
 
     # read subcategory table
     for row in _map_categories(select_subcategories(), category_map):
@@ -161,20 +150,10 @@ def output_category_and_subcategory_tables(category_map):
             direct_subcategories.add((cat, subcat))
 
     # split "and" categories
-    for cat in sorted(cat_to_rows):
+    for cat in set(category_map.values()):
         for subcat in split_category(cat):
-            cat_to_rows[cat].append({'category': cat})
             cat_to_children[cat].add(subcat)
             direct_subcategories.add((cat, subcat))
-
-    # TODO: get rid of category table
-    # output category table
-    for cat, rows in sorted(cat_to_rows.items()):
-        row = merge_dicts(rows)
-        # parent_category has been replaced by subcategory table
-        row.pop('parent_category', None)
-
-        output_row(row, 'category')
 
     # output subcategory table
     cat_to_ancestors = _imply_category_ancestors(cat_to_children)

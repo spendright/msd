@@ -81,7 +81,7 @@ def download_and_merge_dbs(force=False):
         src_db = open_db(src_db_name)
 
         for table in show_tables(src_db):
-            if table not in TABLE_TO_KEY_FIELDS:
+            if not (table in TABLE_TO_KEY_FIELDS or table in OBSOLETE_TABLES):
                 log.warn('Unknown table `{}` in {} db, skipping'.format(
                     table, src_db_name))
 
@@ -96,11 +96,20 @@ def download_and_merge_dbs(force=False):
                 scraper_id = '{}:{}'.format(src_db_name, row['scraper_id'])
                 row = dict(row, scraper_id=scraper_id)
 
+                # category is now used to categorize brands/companies,
+                # but used to hold category hiearchy information
+                if table == 'category' and 'company' not in row:
+                    if row.get('parent_category'):
+                        dt.upsert({'category': row['parent_category'],
+                                   'subcategory': row['category'],
+                                   'scraper_id': row['scraper_id']},
+                                  'subcategory')
+                    continue
+
                 # company tables will be missing 'brand' field
                 if dest_table != table:
                     for field in TABLE_TO_KEY_FIELDS[dest_table]:
-                        if field not in TABLE_TO_KEY_FIELDS[table]:
-                            row.setdefault(field, '')
+                        row.setdefault(field, '')
 
                 dt.upsert(row, dest_table)
 
@@ -276,7 +285,9 @@ def select_categories():
     db = open_input_db()
 
     return [clean_row(row) for row in
-            db.execute('SELECT * FROM category ORDER BY scraper_id, category')]
+            db.execute('SELECT scraper_id, category FROM category'
+                       ' GROUP BY scraper_id, category'
+                       ' ORDER BY scraper_id, category')]
 
 
 def select_subcategories():
@@ -298,7 +309,7 @@ def select_all_companies():
 def select_brand_categories(scraper_id, company, brand):
     db = open_input_db()
 
-    cursor = db.execute('SELECT * from categorize'
+    cursor = db.execute('SELECT * from category'
                         ' WHERE scraper_id = ? AND company = ?'
                         ' AND brand = ?',
                         [scraper_id, company, brand])
