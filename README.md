@@ -24,18 +24,21 @@ name, its author, and its URL. Each campaign has an ID (e.g. `'hope4congo'`),
 which appears in the `campaign_id` field.
 
 `company` contains facts about a company, such as its full, official name
-(`company_full`), URL, and so on and so on. The `company_category` table
-has one row for each category (sector) that a company belongs in.
+(`company_full`), URL, and so on and so on.
 
 There *isn't* a `company_id` field; rather, this scraper finds a recognizable, short name, for each company (e.g. "Coca-Cola", "HP") which appears in the `company` field, and that works as a key. `company` is also suitable to be displayed to users.
 
-Just like with companies, `brand` contains facts about a company, and there
-is also a `brand_category` table. The `brand` field should contain the official
-spelling of a brand, minus the ™ or ® symbol. `company` and `brand` together make the unique key for a brand.
+Just like with companies, `brand` contains facts about a company. The `brand`
+field should contain the official
+spelling of a brand, minus the ™ or ® symbol. `company` and `brand` together
+make the unique key for a brand.
 
-`campaign_brand_rating` and `campaign_company_rating` contain the meat of the
-campaign: should I buy from this brand/company? The keys for these tables
-are `campaign_id`, `company`, and `brand` (for `campaign_brand_rating`), plus
+The `categorize` table has one row for each category that a company/brand
+is in (`brand` is set to `''` for companies).
+
+`rating` contains the meat of the
+campaign data: should I buy from this brand/company? The keys for these tables
+are `campaign_id`, `company`, and `brand` (`''` for companies), plus
 a free-text field, `scope`, to handle things like a rating
 applying to a company's fair trand products.
 
@@ -65,7 +68,7 @@ The scrapers whose data we use are allowed to add other fields as needed
 Rating fields
 -------------
 
-Some fields used specifically for rating (in the `campaign_*_rating` fields):
+Some fields used specifically for `rating`:
 
  * score: a numerical score, where higher is better. Used with min_score and max_score.
  * grade: a US-style letter grade (e.g. A-, C+). Also works for A-E rating systems such as used on [rankabrand](http://rankabrand.org/) and [CDP](https://www.cdp.net/)
