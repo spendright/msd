@@ -41,6 +41,16 @@ BAD_SUFFIXES = [
     ' Products',
 ]
 
+# custom corrections to categories (after normalization)
+CATEGORY_ALIASES = {
+    'Food and Beverage': 'Food and Beverages',
+    'Food and Drink': 'Food and Beverages',
+    'Fun and Games': 'Toys and Games',
+    'Misc. Food': 'Food',
+    'Occ. Safety and Health Consulting': (
+        'Occupational Safety and Health Consulting'),
+}
+
 log = logging.getLogger(__name__)
 
 
@@ -57,6 +67,8 @@ def fix_category(category, scraper_id):
 
     if not category or category in BAD_CATEGORIES:
         return None
+    elif category in CATEGORY_ALIASES:
+        return CATEGORY_ALIASES[category]
     else:
         return category
 
@@ -208,6 +220,7 @@ def _imply_category_ancestors(cat_to_children):
     return dict((cat, ancestors)
                 for cat, ancestors in cat_to_ancestors.items()
                 if ancestors)
+
 
 def _fix_category_row(row, company=None, brand=None, category_map=None):
     del row['scraper_id']
