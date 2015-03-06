@@ -15,8 +15,13 @@
 #   limitations under the License.
 """Utilities for category information."""
 import logging
+import re
 from collections import defaultdict
 
+from .category_data import BAD_CATEGORIES
+from .category_data import BAD_SUFFIXES
+from .category_data import CATEGORY_ALIASES
+from .category_data import CATEGORY_SPLITS
 from .db import output_row
 from .db import select_brand_categories
 from .db import select_categories
@@ -28,30 +33,11 @@ from .norm import merge_dicts
 from .norm import simplify_whitespace
 from .norm import to_title_case
 
-# too vague to be useful
-BAD_CATEGORIES = {
-    'Commercial Products',
-    'Industry Innovators',
-    'Other',
-}
-
-# not useful
-BAD_SUFFIXES = [
-    ' Brands',
-    ' Products',
-]
-
-# custom corrections to categories (after normalization)
-CATEGORY_ALIASES = {
-    'Food and Beverage': 'Food and Beverages',
-    'Food and Drink': 'Food and Beverages',
-    'Fun and Games': 'Toys and Games',
-    'Misc. Food': 'Food',
-    'Occ. Safety and Health Consulting': (
-        'Occupational Safety and Health Consulting'),
-}
 
 log = logging.getLogger(__name__)
+
+
+CATEGORY_SPLIT_RE = re.compile(r'\s+and\s+|,\s+|\.\s+|\s*/\s*')
 
 
 def fix_category(category, scraper_id):
@@ -150,9 +136,10 @@ def _map_categories(rows, category_map):
 def output_category_and_subcategory_tables(category_map):
     cat_to_rows = defaultdict(list)
     cat_to_children = defaultdict(set)
-    # tuples of parent_category, category
+    # tuples of (category, subcategory)
     direct_subcategories = set()
 
+    # TODO: get rid of category table
     # read category table
     for row in _map_categories(select_categories(), category_map):
         cat = row['category']
@@ -169,10 +156,18 @@ def output_category_and_subcategory_tables(category_map):
         cat = row['category']
         subcat = row['subcategory']
 
-        cat_to_children[cat] = subcat
+        cat_to_children[cat].add(subcat)
         if not row.get('is_implied'):
             direct_subcategories.add((cat, subcat))
 
+    # split "and" categories
+    for cat in sorted(cat_to_rows):
+        for subcat in split_category(cat):
+            cat_to_rows[cat].append({'category': cat})
+            cat_to_children[cat].add(subcat)
+            direct_subcategories.add((cat, subcat))
+
+    # TODO: get rid of category table
     # output category table
     for cat, rows in sorted(cat_to_rows.items()):
         row = merge_dicts(rows)
@@ -242,3 +237,15 @@ def get_implied_categories(cats, cat_to_ancestors):
 
     implied_cats -= cats
     return implied_cats
+
+
+def split_category(category):
+    """Determine subcategories of the given (normalized) category."""
+    if category in CATEGORY_SPLITS:
+        return CATEGORY_SPLITS[category]
+    elif CATEGORY_SPLIT_RE.search(category):
+        return set(
+            CATEGORY_ALIASES.get(part, part)
+            for part in CATEGORY_SPLIT_RE.split(category))
+    else:
+        return set()
