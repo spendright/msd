@@ -37,7 +37,7 @@ from .norm import to_title_case
 log = logging.getLogger(__name__)
 
 
-CATEGORY_SPLIT_RE = re.compile(r'\s+and\s+|,\s+|\.\s+|\s*/\s*')
+CATEGORY_SPLIT_RE = re.compile(r',?\s+and\s+|,\s+|\.\s+|\s*/\s*')
 
 
 def fix_category(category, scraper_id):

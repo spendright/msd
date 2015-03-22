@@ -43,6 +43,10 @@ class TestSplitCategory(TestCase):
     def test_empty(self):
         self.assertEqual(split_category(''), set())
 
+    def test_simple_split(self):
+        self.assertEqual(split_category('Home and Garden'),
+                         {'Home', 'Garden'})
+
     def test_custom_split(self):
         self.assertEqual(split_category('Skin and Hair Care'),
                          {'Skin Care', 'Hair Care'})
