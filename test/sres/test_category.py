@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from sres.category import _imply_category_ancestors
+from sres.category import split_category
 
 
 class TestImplyCategoryAncestors(TestCase):
@@ -35,3 +36,17 @@ class TestImplyCategoryAncestors(TestCase):
         self.assertEqual(
             _imply_category_ancestors({1: {2}, 2: {3}, 3: {1}}),
             {1: {2, 3}, 2: {1, 3}, 3: {1, 2}})
+
+
+class TestSplitCategory(TestCase):
+
+    def test_empty(self):
+        self.assertEqual(split_category(''), set())
+
+    def test_custom_split(self):
+        self.assertEqual(split_category('Skin and Hair Care'),
+                         {'Skin Care', 'Hair Care'})
+
+    def test_oxford_comma(self):
+        self.assertEqual(split_category('Foo, Bar, and Baz'),
+                         {'Foo', 'Bar', 'Baz'})
