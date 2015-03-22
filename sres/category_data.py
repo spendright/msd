@@ -92,4 +92,14 @@ CATEGORY_SPLITS = {
         'Web Design',
         'Web Development',
     },
+    'Pet Toys, Bedding and Apparel': {
+        'Pet Toys',
+        'Pet Bedding',
+        'Pet Apparel',
+    },
+    'Housewares, Home Furnishings, and Accessories': {
+        'Housewares',
+        'Home Furnishings',
+        'Home Accessories',
+    },
 }
