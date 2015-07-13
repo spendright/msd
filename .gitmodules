@@ -1,6 +1,6 @@
 [submodule "submodules/srs"]
 	path = submodules/srs
-	url = https://github.com/spendright-scrapers/srs.git
+	url = https://github.com/spendright/srs.git
 [submodule "submodules/titlecase"]
 	path = submodules/titlecase
 	url = https://github.com/ppannuto/python-titlecase.git
