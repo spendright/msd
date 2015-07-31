@@ -84,6 +84,18 @@ TABLES = dict(
         ),
         primary_key=['company'],
     ),
+    company_name=dict(
+        columns=dict(
+            company='text',
+            company_name='text',
+            is_alias='tinyint',
+            is_full='tinyint',
+        ),
+        indexes=[
+            ['company_name'],
+        ],
+        primary_key=['company', 'company_name'],
+    ),
     rating=dict(
         columns=dict(
             brand='text',

@@ -1,1 +1,2 @@
+Unidecode>=0.04.9
 titlecase>=0.7.1

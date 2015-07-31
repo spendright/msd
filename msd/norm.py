@@ -18,6 +18,7 @@ import re
 import unicodedata
 
 from titlecase import titlecase
+from unidecode import unidecode
 
 # matches all whitespace, including non-ascii (e.g. non-breaking space)
 WHITESPACE_RE = re.compile(r'\s+', re.U)
@@ -62,3 +63,7 @@ def to_title_case(s):
     return ''.join(
         '-' if s[i] == '-' else c
         for i, c in enumerate(titlecase(s.replace('-', ' '))))
+
+
+def norm(s):
+    return unidecode(s).lower()

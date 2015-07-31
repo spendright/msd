@@ -48,33 +48,34 @@ DEFUNCT_COMPANIES = {
     'News Corporation',  # split into News Corp, 21st Century Fox
 }
 
+# sets of aliases that belong to the same company
 COMPANY_ALIASES = [
-    ['AB Electrolux', 'Electrolux'],
-    ['Anheuser-Busch', 'Anheuser-Busch InBev'],
-    ['ASUS', 'ASUSTeK Computer'],
-    ['Disney', 'The Walt Disney Company', 'The Walt Disney Co.'],
-    ['Gap', 'The Gap'],  # might solve this with "Gap" brand?
-    ['GE', 'General Electric'],
-    ['HP', 'Hewlett-Packard'],
-    ['HTC Electronics', 'HTC'],
-    ['Illy', 'illycaffè'],
-    ['JetBlue', 'JetBlue Airways'],
-    ['Kellogg', "Kellogg's"],  # might solve this with a brand?
-    ['L Brands', 'Limited Brands'],
-    ['Lindt', 'Lindt & Sprüngli'],
-    ['Lidl', 'Lidl Stiftung'],
-    ['LG', 'LGE', 'LG Electronics'],
-    ['Merck', 'Schering-Plough'],  # merged into Merck
-    ['New Look', 'New Look Retailers'],
-    ['Philips', 'Royal Philips', 'Royal Philips Electronics'],
-    ['PVH', 'Phillips Van Heusen'],
-    ['Rivers Australia', 'Rivers (Australia) Pty Ltd'],
+    {'AB Electrolux', 'Electrolux'},
+    {'Anheuser-Busch', 'Anheuser-Busch InBev'},
+    {'ASUS', 'ASUSTeK Computer'},
+    {'Disney', 'The Walt Disney Company', 'The Walt Disney Co.'},
+    {'Gap', 'The Gap'},  # might solve this with "Gap" brand?
+    {'GE', 'General Electric'},
+    {'HP', 'Hewlett-Packard'},
+    {'HTC Electronics', 'HTC'},
+    {'Illy', 'illycaffè'},
+    {'JetBlue', 'JetBlue Airways'},
+    {'Kellogg', "Kellogg's"},  # might solve this with a brand?
+    {'L Brands', 'Limited Brands'},
+    {'Lindt', 'Lindt & Sprüngli'},
+    {'Lidl', 'Lidl Stiftung'},
+    {'LG', 'LGE', 'LG Electronics'},
+    {'Merck', 'Schering-Plough'},  # merged into Merck
+    {'New Look', 'New Look Retailers'},
+    {'Philips', 'Royal Philips', 'Royal Philips Electronics'},
+    {'PVH', 'Phillips Van Heusen'},
+    {'Rivers Australia', 'Rivers (Australia) Pty Ltd'},
     # technically, Wells Fargo Bank, N.A. is a subsidiary of Wells Fargo
     # the multinational. Not worrying about this now and I don't think this is
     # what they meant anyway.
-    ['Wells Fargo', 'Wells Fargo Bank'],
-    ['Whole Foods', 'Whole Foods Market'],
-    ['Wibra', 'Wibra Supermarkt'],
+    {'Wells Fargo', 'Wells Fargo Bank'},
+    {'Whole Foods', 'Whole Foods Market'},
+    {'Wibra', 'Wibra Supermarkt'},
 ]
 
 # always keep this suffix on the company name
@@ -89,7 +90,7 @@ UNSTRIPPABLE_COMPANIES = {
 }
 
 # don't shorten company names to these
-BAD_COMPANY_VARIANTS = {
+BAD_COMPANY_ALIASES = {
     'News',  # e.g. News Corporation, News Corp.
 }
 
@@ -102,8 +103,8 @@ X_CO_RE = re.compile(
     r'^(?P<company>.*?)( \&)? Co\.$'
 )
 
-# regexes for stuff that's okay to strip
-COMPANY_DISPLAY_REGEXES = [
+# regexes for stuff that's okay to strip off the company name
+COMPANY_NAME_REGEXES = [
     THE_X_CO_RE,
     X_CO_RE,
 ]
@@ -138,7 +139,7 @@ GROUPE_X_RE = re.compile(
 
 # regexes for pulling out company names that are okay for matching
 # but shouldn't automatically qualify to be used as a company's canonical name
-COMPANY_MATCHING_REGEXES = [
+COMPANY_ALIAS_REGEXES = [
     THE_X_COMPANY_RE,
     X_COMPANY_RE,
     GROUPE_X_RE,

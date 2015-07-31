@@ -29,7 +29,7 @@ from .category import build_scraper_category_map_table
 from .category import build_subcategory_table
 from .claim import build_claim_table
 from .company import build_company_table
-from .company import build_scraper_company_map_table
+from .company import build_company_name_and_scraper_company_map_tables
 from .rating import build_rating_table
 from .scraper import build_scraper_table
 
@@ -64,7 +64,7 @@ def fill_output_db(output_db, scratch_db):
     build_subcategory_table(output_db, scratch_db)
 
     # companies
-    build_scraper_company_map_table(output_db, scratch_db)
+    build_company_name_and_scraper_company_map_tables(output_db, scratch_db)
     build_company_table(output_db, scratch_db)
 
     # TODO: subsidiaries would be handled here
