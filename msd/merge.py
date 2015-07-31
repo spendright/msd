@@ -13,6 +13,7 @@
 # limitations under the License.
 """Supporting code to merge data from the scratch table and write it
 to the output table."""
+from msd.db import insert_row
 from msd.table import TABLES
 
 
@@ -27,3 +28,57 @@ def create_output_table(output_db, table_name):
                   for col_name, col_type in sorted(columns.items())),
         ', '.join('`{}`'.format(pk_col) for pk_col in primary_key))
     output_db.execute(create_sql)
+
+
+def clean_output_row(row, table_name):
+    """Clean row for output to the output DB.
+
+    Currently handles:
+    * removing extra 'scraper_id' field
+    * coercing is_* fields to 0 or 1
+    """
+    table_def = TABLES[table_name]
+    columns = table_def['columns']
+
+    cleaned = {}
+
+    for k, v in sorted(row.items()):
+        if k == 'scraper_id' and 'scraper_id' not in columns:
+            continue
+
+        if k.startswith('is_'):
+            v = int(bool(v))
+
+        cleaned[k] = v
+
+    return cleaned
+
+
+def output_row(output_db, table_name, row):
+    """Clean row and output it to output_db."""
+    row = clean_output_row(row, table_name)
+    insert_row(output_db, table_name, row)
+
+
+def merge_dicts(ds):
+    """Merge a sequence of dictionaries."""
+    result = {}
+
+    for d in ds:
+        for k, v in d.items():
+            if k not in result:
+                if hasattr(v, 'copy'):
+                    result[k] = v.copy()
+                else:
+                    result[k] = v
+            else:
+                if hasattr(result[k], 'update'):
+                    result[k].update(v)
+                elif hasattr(result[k], 'extend'):
+                    result[k].extend(v)
+                elif result[k] is None:
+                    result[k] = v
+                elif result[k] == '' and v != '':
+                    result[k] = v
+
+    return result

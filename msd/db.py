@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sqlite3
+from itertools import groupby
 
 
 def insert_row(db, table_name, row):
@@ -32,6 +33,25 @@ def open_db(path):
     db = sqlite3.connect(path)
     db.row_factory = sqlite3.Row
     return db
+
+
+def select_groups(db, table_name, key_cols):
+    """Select all rows in the given table. Yield tuples of
+    (key, [rows]), where key is the values of the various key
+    columns, and rows is a list of all rows with those values, as dicts.
+    """
+    if isinstance(key_cols, str):
+        raise TypeError
+
+    select_sql = 'SELECT * FROM `{}` GROUP BY {}'.format(
+        table_name,
+        ', '.join('`{}`'.format(kc) for kc in key_cols))
+
+    for key, rows in groupby(
+            db.execute(select_sql),
+            key=lambda r: tuple(r[kc] for kc in key_cols)):
+
+        yield key, [dict(row) for row in rows]
 
 
 def show_tables(db):

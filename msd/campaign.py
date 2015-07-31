@@ -14,6 +14,9 @@
 from logging import getLogger
 
 from msd.merge import create_output_table
+from msd.merge import merge_dicts
+from msd.merge import output_row
+from msd.db import select_groups
 
 log = getLogger(__name__)
 
@@ -21,4 +24,12 @@ log = getLogger(__name__)
 def build_campaign_table(output_db, scratch_db):
     log.info('  building campaign table')
     create_output_table(output_db, 'campaign')
-    log.warning('  filling campaign table not yet implemented')
+
+    for (campaign_id,), rows in select_groups(
+            scratch_db, 'campaign', ['campaign_id']):
+
+        if not campaign_id:
+            continue
+
+        campaign_row = merge_dicts(rows)
+        output_row(output_db, 'campaign', campaign_row)

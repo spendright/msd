@@ -41,7 +41,7 @@ log = getLogger(__name__)
 def build_output_db(scratch_db_path, output_db_path):
     output_db_tmp_path = output_db_path + '.tmp'
 
-    log.info('building {}'.format(output_db_tmp_path))
+    log.info('building {}...'.format(output_db_tmp_path))
 
     if exists(output_db_tmp_path):
         remove(output_db_tmp_path)

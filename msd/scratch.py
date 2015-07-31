@@ -58,7 +58,7 @@ def build_scratch_db(
     if exists(scratch_db_tmp_path):
         remove(scratch_db_tmp_path)
 
-    log.info('building {}'.format(scratch_db_tmp_path))
+    log.info('building {}...'.format(scratch_db_tmp_path))
 
     with open_db(scratch_db_tmp_path) as scratch_db:
 
