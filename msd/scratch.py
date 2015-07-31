@@ -152,7 +152,7 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
         insert_row(scratch_db, table_name, row)
 
 
-def select_distinct_values(scratch_db, cols):
+def get_distinct_values(scratch_db, cols):
     """Get all distinct values of the given list of columns from
     any table that has all of the given columns."""
     values = set()

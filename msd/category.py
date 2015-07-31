@@ -20,7 +20,7 @@ from .merge import create_output_table
 from .merge import output_row
 from .norm import simplify_whitespace
 from .norm import to_title_case
-from .scratch import select_distinct_values
+from .scratch import get_distinct_values
 
 log = getLogger(__name__)
 
@@ -35,13 +35,18 @@ def build_scraper_category_map_table(output_db, scratch_db):
     log.info('  building scraper_category_map table')
     create_output_table(output_db, 'scraper_category_map')
 
-    for scraper_id, scraper_category in select_distinct_values(
-            scratch_db, ['scraper_id', 'category']):
+    # a category exists if it's named as a category or a subcategory
+    scraper_cats = (
+        get_distinct_values(scratch_db, ['scraper_id', 'category']) |
+        get_distinct_values(scratch_db, ['scraper_id', 'subcategory']))
 
+    for scraper_id, scraper_category in scraper_cats:
+        # derive canonical category from scraper category
         category = fix_category(scraper_category)
         if not category:
             continue
 
+        # output mapping
         output_row(output_db, 'scraper_category_map', dict(
             category=category,
             scraper_category=scraper_category,
@@ -55,6 +60,8 @@ def build_subcategory_table(output_db, scratch_db):
 
 
 def map_category(output_db, scraper_id, scraper_category):
+    """Get the canonical category corresponding to the
+    given category in the scraper data."""
     select_sql = ('SELECT category FROM scraper_category_map'
                   ' WHERE scraper_id = ? AND scraper_category = ?')
     rows = list(output_db.execute(select_sql, [scraper_id, scraper_category]))
