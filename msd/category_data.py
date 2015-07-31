@@ -22,7 +22,7 @@ BAD_CATEGORIES = {
 }
 
 # strip these
-BAD_SUFFIXES = [
+USELESS_CATEGORY_SUFFIXES = [
     ' Brands',
     ' Products',
 ]

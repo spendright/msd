@@ -17,6 +17,8 @@
 import re
 import unicodedata
 
+from titlecase import titlecase
+
 # matches all whitespace, including non-ascii (e.g. non-breaking space)
 WHITESPACE_RE = re.compile(r'\s+', re.U)
 
@@ -38,25 +40,25 @@ BAD_CODEPOINTS = {
 }
 
 
-def clean_string(s, *,
-                 compact_whitespace=True,
-                 normalize_unicode=True,
-                 strip=True,
-                 translate_bad_chars=True):
+def clean_string(s):
     """Clean messy strings from the outside world."""
     if not isinstance(s, str):
         raise TypeError
 
-    if normalize_unicode:
-        s = unicodedata.normalize('NFKD', s)
-
-    if translate_bad_chars:
-        s = s.translate(BAD_CODEPOINTS)
-
-    if compact_whitespace:
-        s = WHITESPACE_RE.sub(' ', s).strip()
-
-    if strip:
-        s = s.strip()
+    s = unicodedata.normalize('NFKD', s)
+    s = s.translate(BAD_CODEPOINTS)
+    s = simplify_whitespace(s)
 
     return s
+
+
+def simplify_whitespace(s):
+    """Strip s, and use only single spaces within s."""
+    return WHITESPACE_RE.sub(' ', s.strip())
+
+
+def to_title_case(s):
+    """Like titlecase.titlecase(), but treat hyphens as spaces."""
+    return ''.join(
+        '-' if s[i] == '-' else c
+        for i, c in enumerate(titlecase(s.replace('-', ' '))))

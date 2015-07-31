@@ -13,7 +13,14 @@
 # limitations under the License.
 from logging import getLogger
 
+from .category_data import BAD_CATEGORIES
+from .category_data import USELESS_CATEGORY_SUFFIXES
+from .category_data import CATEGORY_ALIASES
 from .merge import create_output_table
+from .merge import output_row
+from .norm import simplify_whitespace
+from .norm import to_title_case
+from .scratch import select_distinct_values
 
 log = getLogger(__name__)
 
@@ -27,10 +34,51 @@ def build_category_table(output_db, scratch_db):
 def build_scraper_category_map_table(output_db, scratch_db):
     log.info('  building scraper_category_map table')
     create_output_table(output_db, 'scraper_category_map')
-    log.warning('  filling scraper_category_map table not yet implemented')
+
+    for scraper_id, scraper_category in select_distinct_values(
+            scratch_db, ['scraper_id', 'category']):
+
+        category = fix_category(scraper_category)
+        if not category:
+            continue
+
+        output_row(output_db, 'scraper_category_map', dict(
+            category=category,
+            scraper_category=scraper_category,
+            scraper_id=scraper_id))
 
 
 def build_subcategory_table(output_db, scratch_db):
     log.info('  building subcategory table')
     create_output_table(output_db, 'subcategory')
     log.warning('  filling subcategory table not yet implemented')
+
+
+def map_category(output_db, scraper_id, scraper_category):
+    select_sql = ('SELECT category FROM scraper_category_map'
+                  ' WHERE scraper_id = ? AND scraper_category = ?')
+    rows = list(output_db.execute(select_sql, [scraper_id, scraper_category]))
+    if rows:
+        return rows[0][0]
+    else:
+        return None
+
+
+def fix_category(category):
+    category = category.replace('&', ' and ')
+    category = simplify_whitespace(category)
+    category = to_title_case(category)
+
+    for suffix in USELESS_CATEGORY_SUFFIXES:
+        if category.endswith(suffix):
+            category = category[:-len(suffix)]
+            break
+
+    if not category or category in BAD_CATEGORIES:
+        return None
+
+    elif category in CATEGORY_ALIASES:
+        return CATEGORY_ALIASES[category]
+
+    else:
+        return category
