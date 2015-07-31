@@ -13,6 +13,7 @@
 # limitations under the License.
 """Supporting code to merge data from the scratch table and write it
 to the output table."""
+from msd.db import create_index
 from msd.db import insert_row
 from msd.table import TABLES
 
@@ -21,6 +22,7 @@ def create_output_table(output_db, table_name):
     table_def = TABLES[table_name]
     columns = table_def['columns']
     primary_key = table_def['primary_key']
+    indexes = table_def.get('indexes', ())
 
     create_sql = 'CREATE TABLE `{}` ({}, PRIMARY KEY ({}))'.format(
         table_name,
@@ -28,6 +30,9 @@ def create_output_table(output_db, table_name):
                   for col_name, col_type in sorted(columns.items())),
         ', '.join('`{}`'.format(pk_col) for pk_col in primary_key))
     output_db.execute(create_sql)
+
+    for index_cols in indexes:
+        create_index(output_db, table_name, index_cols)
 
 
 def clean_output_row(row, table_name):

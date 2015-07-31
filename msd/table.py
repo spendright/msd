@@ -111,6 +111,9 @@ TABLES = dict(
             scraper_company='text',
             scraper_id='text',
         ),
+        indexes=[
+            ['company', 'brand'],
+        ],
         primary_key=['scraper_id', 'scraper_company', 'scraper_brand'],
     ),
     scraper=dict(
@@ -126,6 +129,9 @@ TABLES = dict(
             scraper_category='text',
             scraper_id='text',
         ),
+        indexes=[
+            ['category'],
+        ],
         primary_key=['scraper_id', 'scraper_category'],
     ),
     scraper_company_map=dict(
@@ -134,6 +140,9 @@ TABLES = dict(
             scraper_company='text',
             scraper_id='text',
         ),
+        indexes=[
+            ['company'],
+        ],
         primary_key=['scraper_id', 'scraper_company'],
     ),
     subcategory=dict(

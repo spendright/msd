@@ -16,6 +16,9 @@ from itertools import groupby
 
 
 def create_index(db, table_name, index_cols):
+    if isinstance(index_cols, str):
+        raise TypeError
+
     index_name = '_'.join([table_name] + list(index_cols))
     index_sql = 'CREATE INDEX `{}` ON `{}` ({})'.format(
             index_name, table_name, ', '.join(
