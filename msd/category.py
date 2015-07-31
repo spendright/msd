@@ -11,11 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
+from collections import defaultdict
 from logging import getLogger
 
 from .category_data import BAD_CATEGORIES
 from .category_data import USELESS_CATEGORY_SUFFIXES
 from .category_data import CATEGORY_ALIASES
+from .category_data import CATEGORY_SPLITS
+from .db import select_groups
 from .merge import create_output_table
 from .merge import output_row
 from .norm import simplify_whitespace
@@ -23,6 +27,8 @@ from .norm import to_title_case
 from .scratch import get_distinct_values
 
 log = getLogger(__name__)
+
+CATEGORY_SPLIT_RE = re.compile(r',?\s+and\s+|,\s+|\.\s+|\s*/\s*')
 
 
 def build_category_table(output_db, scratch_db):
@@ -56,7 +62,71 @@ def build_scraper_category_map_table(output_db, scratch_db):
 def build_subcategory_table(output_db, scratch_db):
     log.info('  building subcategory table')
     create_output_table(output_db, 'subcategory')
-    log.warning('  filling subcategory table not yet implemented')
+
+    # map from category to {subcategories}
+    cat_to_subcats = defaultdict(set)
+    # tuples of (category, subcategory)
+    direct_subcategories = set()
+
+    # read and translate subcategory table
+    for (scraper_id, scraper_category, scraper_subcategory), rows in (
+            select_groups(scratch_db, 'subcategory',
+                          ['scraper_id', 'category', 'subcategory'])):
+        category = map_category(output_db, scraper_id, scraper_category)
+        subcategory = map_category(output_db, scraper_id, scraper_subcategory)
+        if not (category and subcategory):
+            continue
+
+        cat_to_subcats[category].add(subcategory)
+        if any(not row.get('is_implied') for row in rows):
+            direct_subcategories.add((category, subcategory))
+
+    # split "and" categories
+    cat_sql = 'SELECT DISTINCT category from scraper_category_map'
+    for row in output_db.execute(cat_sql):
+        category = row[0]
+        for subcategory in split_category(category):
+            cat_to_subcats[category].add(subcategory)
+            direct_subcategories.add((category, subcategory))
+
+    # imply subcategories
+    cat_to_ancestors = _imply_category_ancestors(cat_to_subcats)
+
+    # output rows
+    for cat, ancestors in sorted(cat_to_ancestors.items()):
+        for ancestor in sorted(ancestors):
+            subcat_row = {'category': ancestor, 'subcategory': cat}
+            if (ancestor, cat) not in direct_subcategories:
+                subcat_row['is_implied'] = 1
+
+            output_row(output_db, 'subcategory', subcat_row)
+
+
+def _imply_category_ancestors(cat_to_subcats):
+    cat_to_ancestors = defaultdict(set)
+    active_cats = set(cat_to_subcats)
+
+    while active_cats:
+        next_active_cats = set()
+
+        for active_cat in active_cats:
+            children = cat_to_subcats.get(active_cat, ())
+            for child in children:
+                # don't make anything ancestor of itself
+                to_propogate = (
+                    {active_cat} | cat_to_ancestors[active_cat]) - {child}
+                child_ancestors = cat_to_ancestors[child]
+
+                if to_propogate - child_ancestors:
+                    cat_to_ancestors[child] |= to_propogate
+                    next_active_cats.add(child)
+
+        active_cats = next_active_cats
+
+    return dict((cat, ancestors)
+                for cat, ancestors in cat_to_ancestors.items()
+                if ancestors)
+
 
 
 def map_category(output_db, scraper_id, scraper_category):
@@ -89,3 +159,15 @@ def fix_category(category):
 
     else:
         return category
+
+
+def split_category(category):
+    """Determine subcategories of the given (normalized) category."""
+    if category in CATEGORY_SPLITS:
+        return CATEGORY_SPLITS[category]
+    elif CATEGORY_SPLIT_RE.search(category):
+        return set(
+            CATEGORY_ALIASES.get(part, part)
+            for part in CATEGORY_SPLIT_RE.split(category))
+    else:
+        return set()

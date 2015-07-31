@@ -47,7 +47,7 @@ def open_db(path):
     return db
 
 
-def select_groups(db, table_name, key_cols):
+def select_groups(db, table_name, key_cols, cols=None):
     """Select all rows in the given table. Yield tuples of
     (key, [rows]), where key is the values of the various key
     columns, and rows is a list of all rows with those values, as dicts.
@@ -55,7 +55,8 @@ def select_groups(db, table_name, key_cols):
     if isinstance(key_cols, str):
         raise TypeError
 
-    select_sql = 'SELECT * FROM `{}` GROUP BY {}'.format(
+    select_sql = 'SELECT {} FROM `{}` GROUP BY {}'.format(
+        '*' if cols is None else ', '.join('`{}`'.format(c) for c in cols),
         table_name,
         ', '.join('`{}`'.format(kc) for kc in key_cols))
 
