@@ -13,7 +13,10 @@
 # limitations under the License.
 from logging import getLogger
 
+from msd.db import select_groups
 from msd.merge import create_output_table
+from msd.merge import merge_dicts
+from msd.merge import output_row
 
 log = getLogger(__name__)
 
@@ -21,4 +24,12 @@ log = getLogger(__name__)
 def build_scraper_table(output_db, scratch_db):
     log.info('  building scraper table')
     create_output_table(output_db, 'scraper')
-    log.warning('  filling scraper table not yet implemented')
+
+    for (scraper_id,), rows in select_groups(
+            scratch_db, 'scraper', ['scraper_id']):
+
+        if not scraper_id:
+            continue
+
+        scraper_row = merge_dicts(rows)
+        output_row(output_db, 'scraper', scraper_row)
