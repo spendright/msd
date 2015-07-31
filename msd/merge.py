@@ -46,26 +46,26 @@ def clean_output_row(row, table_name):
     columns = table_def['columns']
     primary_key = table_def.get('primary_key', ())
 
-    cleaned = {}
+    row = row.copy()
 
-    for k, v in sorted(row.items()):
-        if k == 'scraper_id' and 'scraper_id' not in columns:
-            continue
+    # delete extra scraper_id column
+    if 'scraper_id' in row and 'scraper_id' not in columns:
+        del row['scraper_id']
 
-        # coerce is_* fields to 0 or 1
-        if k.startswith('is_'):
-            v = int(bool(v))
-
-        # don't allow null in primary key
-        if k in primary_key and v is None:
+    # make sure primary key cols exists and are non-null
+    for k in primary_key:
+        if row.get(k) is None:
             if columns[k] == 'text':
-                v = ''
+                row[k] = ''
             else:
-                v = 0
+                row[k] = 0
 
-        cleaned[k] = v
+    # make sure is_* fields exist and are either 0 or 1
+    for k in sorted(columns):
+        if k.startswith('is_'):
+            row[k] = int(bool(row.get(k)))
 
-    return cleaned
+    return row
 
 
 def output_row(output_db, table_name, row):
@@ -96,3 +96,48 @@ def merge_dicts(ds):
                     result[k] = v
 
     return result
+
+
+def group_by_keys(items, keyfunc):
+    """Given a list of items, returns groups of items, such that if
+    any two items share a key returned by keyfunc(item), they are in the
+    same group."""
+
+    key_to_group = {}
+
+    for item in items:
+        keys = keyfunc(item)
+
+        # strings are also sequences of characters, but that's almost
+        # certainly not what we mean
+        if isinstance(keys, str):
+            raise TypeError(
+                '{} is not a valid set of keys (did you mean {}?)'.format(
+                    repr(keys), repr([keys])))
+
+        keys = set(keys)
+
+
+        group = {'keys': keys.copy(), 'items': [item]}
+
+        # merge all matching groups into this one
+        ids_seen = set()
+
+        for key in keys:
+            group_to_merge = key_to_group.get(key)
+            if group_to_merge and id(group_to_merge) not in ids_seen:
+                group['keys'].update(group_to_merge['keys'])
+                group['items'].extend(group_to_merge['items'])
+                ids_seen.add(id(group_to_merge))
+
+        # make all keys point at our new group
+        for key in group['keys']:
+            key_to_group[key] = group
+
+    # read out all groups
+    ids_seen = set()
+
+    for group in key_to_group.itervalues():
+        if id(group) not in ids_seen:
+            yield group['items']
+            ids_seen.add(id(group))
