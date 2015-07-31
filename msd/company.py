@@ -40,7 +40,13 @@ def build_scraper_company_map_table(output_db, scratch_db):
     pass
 
 
-def yield_company_variants(company):
+
+def get_company_variants(company):
+    return set(v for v in _yield_company_variants(company)
+               if len(v) > 1)
+
+
+def _yield_company_variants(company):
     company = COMPANY_CORRECTIONS.get(company) or company
 
     # if it's a name like Foo, Inc., allow "Foo" as a display variant
