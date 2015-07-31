@@ -44,6 +44,7 @@ def clean_output_row(row, table_name):
     """
     table_def = TABLES[table_name]
     columns = table_def['columns']
+    primary_key = table_def.get('primary_key', ())
 
     cleaned = {}
 
@@ -51,8 +52,16 @@ def clean_output_row(row, table_name):
         if k == 'scraper_id' and 'scraper_id' not in columns:
             continue
 
+        # coerce is_* fields to 0 or 1
         if k.startswith('is_'):
             v = int(bool(v))
+
+        # don't allow null in primary key
+        if k in primary_key and v is None:
+            if columns[k] == 'text':
+                v = ''
+            else:
+                v = 0
 
         cleaned[k] = v
 
