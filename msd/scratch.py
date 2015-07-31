@@ -29,7 +29,7 @@ log = getLogger(__name__)
 def build_scratch_db(
         input_db_paths, scratch_db_path, *, force=False):
 
-    if exists(scratch_db_path):
+    if exists(scratch_db_path) and not force:
         mtime = getmtime(scratch_db_path)
         if all(exists(db_path) and getmtime(db_path) < mtime
                for db_path in input_db_paths):
@@ -75,7 +75,7 @@ def init_scratch_tables(db):
         index_cols = list(table_def.get('primary_key') or ())
         if 'scraper_id' not in index_cols:
             index_cols = ['scraper_id'] + index_cols
-        index_name = '_'.join(index_cols)
+        index_name = '_'.join([table_name] + index_cols)
 
         index_sql = 'CREATE INDEX `{}` ON `{}` ({})'.format(
             index_name, table_name, ', '.join(
@@ -101,8 +101,9 @@ def dump_db_to_scratch(input_db, scratch_db, scraper_prefix=''):
             ', '.join(extra_table_names)))
 
         for table_name in sorted(TABLES):
-            dump_table_to_scratch(
-                input_db, table_name, scratch_db, scraper_prefix)
+            if table_name in input_table_names:
+                dump_table_to_scratch(
+                    input_db, table_name, scratch_db, scraper_prefix)
 
 
 def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
