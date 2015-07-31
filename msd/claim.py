@@ -21,4 +21,4 @@ log = getLogger(__name__)
 def build_claim_table(output_db, scratch_db):
     log.info('  building claim table')
     create_output_table(output_db, 'claim')
-    log.warning('  filling claim table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')

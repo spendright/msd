@@ -16,10 +16,12 @@ from functools import lru_cache
 from logging import getLogger
 
 from .company_data import BAD_COMPANY_ALIASES
-from .company_data import COMPANY_CORRECTIONS
-from .company_data import COMPANY_NAME_REGEXES
+from .company_data import BAD_COMPANY_NAMES
 from .company_data import COMPANY_ALIASES
 from .company_data import COMPANY_ALIAS_REGEXES
+from .company_data import COMPANY_CORRECTIONS
+from .company_data import COMPANY_NAMES
+from .company_data import COMPANY_NAME_REGEXES
 from .company_data import COMPANY_TYPE_CORRECTIONS
 from .company_data import COMPANY_TYPE_RE
 from .company_data import UNSTRIPPABLE_COMPANIES
@@ -43,7 +45,7 @@ CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
 def build_company_table(output_db, scratch_db):
     log.info('  building company table')
     create_output_table(output_db, 'company')
-    log.warning('  filling company table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')
 
 
 def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
@@ -57,11 +59,17 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
     # aliases: name variants usable for matching (may include *names*)
     # scraper_companies: tuples of (scraper_id, scraper_company)
 
-    cds = [dict(aliases=set(), names=set(), scraper_companies=set())]
+    cds = []
 
-    # populate with COMPANY_ALIASES
+    # TODO: move this to a scraper (company_name table)
+
+    # populate with hard-coded company names
     for aliases in COMPANY_ALIASES:
-        cds.append(dict(aliases=aliases()))
+        cds.append(dict(aliases=aliases, names=set(), scraper_companies=set()))
+
+    # populate with hard-coded company names
+    for names in COMPANY_NAMES:
+        cds.append(dict(aliases=names, names=names, scraper_companies=set()))
 
     # populate with 'company' and 'company_full' fields
     scraper_companies = (
@@ -91,16 +99,16 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
             # already did this for scraper_company, above
             names = get_company_names(scraper_company_name)
 
-        cds.append(dict(aliases=aliases, names=names))
+        cds.append(dict(aliases=aliases, names=names, scraper_companies=set()))
 
     # group together by normed variants of aliases
     def keyfunc(cd):
         keys = set()
-        for cd in cds:
-            for alias in cd.get('aliases', set()) | cd.get('names', set()):
-                keys.update(norm_company(alias))
+        for alias in cd['aliases'] | cd['names']:
+            keys.update(get_company_keys(alias))
         return keys
 
+    # there are lots of these, so show progress
     for cd_group in group_by_keys(cds, keyfunc):
         cd = merge_dicts(cd_group)
 
@@ -121,32 +129,38 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
         # write to company_name
         for company_name in sorted(cd['names'] | cd['aliases']):
             row = dict(company=company, company_name=company_name)
-            if company_name not in cd['names']:
+            if (company_name not in cd['names'] or
+                (company_name in BAD_COMPANY_NAMES and
+                 company_name != company)):
                 row['is_alias'] = 1
             if company_name == company_full:
-                row['is_company_full'] = 1
+                row['is_full'] = 1
             output_row(output_db, 'company_name', row)
 
 
 
 def pick_company_name(names):
-    # shortest name, ties broken by, not all lower/upper, has accents
+    # shortest non-bad name, ties broken by not all lower/upper, has accents
     return sorted(names,
-                  key=lambda n: (len(n), n == n.lower(), n == n.upper(),
-                                 -len(n.encode('utf8'))))[0]
+                  key=lambda n: (
+                      n in BAD_COMPANY_NAMES,
+                      len(n), n == n.lower(), n == n.upper(),
+                      -len(n.encode('utf8'))))[0]
 
 
 def pick_company_full(names):
     # longest name, ties broken by, not all lower/upper, has accents
     return sorted(names,
-                  key=lambda n: (-len(n), n == n.lower(), n == n.upper(),
-                                 -len(n.encode('utf8'))))[0]
+                  key=lambda n: (
+                      n in BAD_COMPANY_NAMES,
+                      -len(n), n == n.lower(), n == n.upper(),
+                      -len(n.encode('utf8'))))[0]
 
 
 
 
 
-def norm_company(s):
+def get_company_keys(s):
     variants = set()
 
     variants.add(norm(CAMEL_CASE_RE.sub(' ', s)))
@@ -210,7 +224,7 @@ def _yield_company_names(company):
 def get_company_aliases(company):
     """Get a set of all ways to match against this company. Some of
     these may be too abbreviated to use as the company's display name."""
-    aliases = get_company_names()
+    aliases = get_company_names(company)
 
     # Match "The X Company", "X Company", "Groupe X"
     for regex in COMPANY_ALIAS_REGEXES:
@@ -218,7 +232,7 @@ def get_company_aliases(company):
         if m:
             alias = m.group('company')
             if alias not in BAD_COMPANY_ALIASES:
-                aliases.add(aliases)
+                aliases.add(alias)
                 break
 
     # split on slashes

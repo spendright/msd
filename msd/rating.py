@@ -21,4 +21,4 @@ log = getLogger(__name__)
 def build_rating_table(output_db, scratch_db):
     log.info('  building rating table')
     create_output_table(output_db, 'rating')
-    log.warning('  filling rating table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')

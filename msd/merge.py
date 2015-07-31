@@ -137,7 +137,7 @@ def group_by_keys(items, keyfunc):
     # read out all groups
     ids_seen = set()
 
-    for group in key_to_group.itervalues():
+    for group in key_to_group.values():
         if id(group) not in ids_seen:
             yield group['items']
             ids_seen.add(id(group))

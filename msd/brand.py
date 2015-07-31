@@ -21,10 +21,10 @@ log = getLogger(__name__)
 def build_brand_table(output_db, scratch_db):
     log.info('  building brand table')
     create_output_table(output_db, 'brand')
-    log.warning('  filling brand table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')
 
 
 def build_scraper_brand_map_table(output_db, scratch_db):
     log.info('  building scraper_brand_map table')
     create_output_table(output_db, 'scraper_brand_map')
-    log.warning('  filling scraper_brand_map table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')

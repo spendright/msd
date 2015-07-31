@@ -34,7 +34,7 @@ CATEGORY_SPLIT_RE = re.compile(r',?\s+and\s+|,\s+|\.\s+|\s*/\s*')
 def build_category_table(output_db, scratch_db):
     log.info('  building category table')
     create_output_table(output_db, 'category')
-    log.warning('  filling category table not yet implemented')
+    log.warning('    NOT YET IMPLEMENTED')
 
 
 def build_scraper_category_map_table(output_db, scratch_db):

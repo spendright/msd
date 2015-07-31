@@ -48,8 +48,25 @@ DEFUNCT_COMPANIES = {
     'News Corporation',  # split into News Corp, 21st Century Fox
 }
 
-# sets of aliases that belong to the same company
+# sets of names to match companies by
 COMPANY_ALIASES = [
+    {'LG', 'LGE'},
+    {'AEO', 'American Eagle Outfitters'},
+    {'Merck', 'Schering-Plough'},  # merged into Merck
+]
+
+# don't shorten company names to these
+BAD_COMPANY_ALIASES = {
+    'News',  # e.g. News Corporation, News Corp.
+}
+
+# don't use these as display names unless we have no other options
+BAD_COMPANY_NAMES = {
+    'LGE',
+}
+
+# sets of valid names for the same company
+COMPANY_NAMES = [
     {'AB Electrolux', 'Electrolux'},
     {'Anheuser-Busch', 'Anheuser-Busch InBev'},
     {'ASUS', 'ASUSTeK Computer'},
@@ -64,8 +81,7 @@ COMPANY_ALIASES = [
     {'L Brands', 'Limited Brands'},
     {'Lindt', 'Lindt & Sprüngli'},
     {'Lidl', 'Lidl Stiftung'},
-    {'LG', 'LGE', 'LG Electronics'},
-    {'Merck', 'Schering-Plough'},  # merged into Merck
+    {'LG', 'LG Electronics'},
     {'New Look', 'New Look Retailers'},
     {'Philips', 'Royal Philips', 'Royal Philips Electronics'},
     {'PVH', 'Phillips Van Heusen'},
@@ -87,11 +103,6 @@ UNSTRIPPABLE_COMPANY_TYPES = {
 UNSTRIPPABLE_COMPANIES = {
     'Globe International',
     'Woolworths Limited',
-}
-
-# don't shorten company names to these
-BAD_COMPANY_ALIASES = {
-    'News',  # e.g. News Corporation, News Corp.
 }
 
 # "The X Co." -- okay to strip
