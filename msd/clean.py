@@ -16,8 +16,6 @@
 import re
 import unicodedata
 
-from msd.table import TABLES
-
 # matches all whitespace, including non-ascii (e.g. non-breaking space)
 WHITESPACE_RE = re.compile(r'\s+', re.U)
 
@@ -39,10 +37,11 @@ BAD_CODEPOINTS = {
 }
 
 
-
-
-def clean(v, translate_bad_chars=True, strip=True, compact_whitespace=True,
-          normalize_unicode=True):
+def clean_value(v,
+                translate_bad_chars=True,
+                strip=True,
+                compact_whitespace=True,
+                normalize_unicode=True):
 
     if isinstance(v, bytes):
         raise TypeError
@@ -63,15 +62,3 @@ def clean(v, translate_bad_chars=True, strip=True, compact_whitespace=True,
         v = v.strip()
 
     return v
-
-
-def clean_row(row, table_name=None):
-    """Clean each value in the given row, and remove extra columns."""
-    table_def = TABLES.get(table_name, {})
-    valid_cols = set(table_def.get('columns', ()))
-    clean_kwarg_map = table_def.get('clean_kwargs', {})
-
-    return dict(
-        (col_name, clean(value, **clean_kwarg_map.get(col_name, {})))
-        for col_name, value in row.items()
-        if valid_cols is None or col_name in valid_cols)

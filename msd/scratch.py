@@ -17,7 +17,7 @@ from os import rename
 from os.path import exists
 from os.path import getmtime
 
-from msd.clean import clean_row
+from msd.clean import clean_value
 from msd.db import insert_row
 from msd.db import open_db
 from msd.db import show_tables
@@ -92,7 +92,6 @@ def db_path_to_scraper_prefix(path):
 
 
 def dump_db_to_scratch(input_db, scratch_db, scraper_prefix=''):
-
     input_table_names = set(show_tables(input_db))
 
     extra_table_names = input_table_names - set(TABLES)
@@ -100,13 +99,15 @@ def dump_db_to_scratch(input_db, scratch_db, scraper_prefix=''):
         log.info('  ignoring extra tables: {}'.format(
             ', '.join(extra_table_names)))
 
-        for table_name in sorted(TABLES):
-            if table_name in input_table_names:
-                dump_table_to_scratch(
-                    input_db, table_name, scratch_db, scraper_prefix)
+    for table_name in sorted(TABLES):
+        if table_name in input_table_names:
+            dump_table_to_scratch(
+                input_db, table_name, scratch_db, scraper_prefix)
 
 
 def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
+    log.info('  dumping table: {}'.format(table_name))
+
     table_def = TABLES[table_name]
 
     select_sql = 'SELECT * from `{}`'.format(table_name)
@@ -122,9 +123,9 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
                     table_name, ', '.join(extra_cols)))
 
         # clean ugly data, dump extra columns
-        row = clean_row(row, table_name)
+        row = clean_input_row(row, table_name)
 
-        # add scraper_id
+        # pick scraper_id
         if 'scraper_id' in row:
             row['scraper_id'] = scraper_prefix + '.' + row['scraper_id']
         else:
@@ -132,3 +133,36 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
 
         # insert!
         insert_row(scratch_db, table_name, row)
+
+
+def select_all_values(scratch_db, cols):
+    """Get all distinct values of the given list of columns from
+    any table that has all of the given columns."""
+    values = set()
+
+    for table_name, table_def in sorted(TABLES.items()):
+        # skip tables that don't have all the columns
+        if set(cols) - set(table_def['columns']) - {'scraper_id'}:
+            continue
+
+        select_sql = 'SELECT {} FROM `{}`'.format(
+            ', '.join('`{}`'.format(col) for col in cols),
+            table_name)
+        for row in scratch_db.execute(select_sql):
+            values.add(tuple(row))
+
+    return values
+
+
+def clean_input_row(row, table_name):
+    """Clean each value in the given row of input data, and remove
+    extra columns."""
+    table_def = TABLES.get(table_name, {})
+    valid_cols = set(table_def.get('columns', ())) | {'scraper_id'}
+    clean_kwarg_map = table_def.get('clean_kwargs', {})
+
+    return dict(
+        (col_name, clean_value(value,
+                               **clean_kwarg_map.get(col_name, {})))
+        for col_name, value in row.items()
+        if col_name in valid_cols)
