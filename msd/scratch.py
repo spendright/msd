@@ -18,12 +18,12 @@ from os import rename
 from os.path import exists
 from os.path import getmtime
 
-from msd.db import create_index
-from msd.db import insert_row
-from msd.db import open_db
-from msd.db import show_tables
-from msd.norm import clean_string
-from msd.table import TABLES
+from .db import create_index
+from .db import insert_row
+from .db import open_db
+from .db import show_tables
+from .norm import clean_string
+from .table import TABLES
 
 log = getLogger(__name__)
 

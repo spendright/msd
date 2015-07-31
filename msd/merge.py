@@ -13,9 +13,9 @@
 # limitations under the License.
 """Supporting code to merge data from the scratch table and write it
 to the output table."""
-from msd.db import create_index
-from msd.db import insert_row
-from msd.table import TABLES
+from .db import create_index
+from .db import insert_row
+from .table import TABLES
 
 
 def create_output_table(output_db, table_name):

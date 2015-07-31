@@ -21,19 +21,19 @@ from os import remove
 from os import rename
 from os.path import exists
 
-from msd.brand import build_brand_table
-from msd.brand import build_scraper_brand_map_table
-from msd.campaign import build_campaign_table
-from msd.category import build_category_table
-from msd.category import build_scraper_category_map_table
-from msd.category import build_subcategory_table
-from msd.claim import build_claim_table
-from msd.company import build_company_table
-from msd.company import build_scraper_company_map_table
-from msd.rating import build_rating_table
-from msd.scraper import build_scraper_table
+from .brand import build_brand_table
+from .brand import build_scraper_brand_map_table
+from .campaign import build_campaign_table
+from .category import build_category_table
+from .category import build_scraper_category_map_table
+from .category import build_subcategory_table
+from .claim import build_claim_table
+from .company import build_company_table
+from .company import build_scraper_company_map_table
+from .rating import build_rating_table
+from .scraper import build_scraper_table
 
-from msd.db import open_db
+from .db import open_db
 
 log = getLogger(__name__)
 

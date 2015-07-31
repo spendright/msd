@@ -13,7 +13,7 @@
 # limitations under the License.
 from logging import getLogger
 
-from msd.merge import create_output_table
+from .merge import create_output_table
 
 log = getLogger(__name__)
 

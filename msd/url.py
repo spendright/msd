@@ -14,7 +14,7 @@
 """Merge in extra data scraped from a url."""
 from functools import lru_cache
 
-from msd.table import TABLES
+from .table import TABLES
 
 
 def match_urls(rows, scratch_db):

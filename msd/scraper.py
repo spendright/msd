@@ -13,10 +13,10 @@
 # limitations under the License.
 from logging import getLogger
 
-from msd.db import select_groups
-from msd.merge import create_output_table
-from msd.merge import merge_dicts
-from msd.merge import output_row
+from .db import select_groups
+from .merge import create_output_table
+from .merge import merge_dicts
+from .merge import output_row
 
 log = getLogger(__name__)
 
