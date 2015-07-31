@@ -14,30 +14,43 @@
 import logging
 from argparse import ArgumentParser
 
+from msd.output import build_output_db
 from msd.scratch import build_scratch_db
 
-DEFAULT_SCRATCH_DB = 'scratch.sqlite'
-DEFAULT_OUTPUT_DB = 'data.sqlite'
+DEFAULT_SCRATCH_DB = 'msd-scratch.sqlite'
+DEFAULT_OUTPUT_DB = 'msd.sqlite'
 
 log = logging.getLogger('msd.cmd')
 
 
 def main(args=None):
-    run(parse_args())
+    opts = parse_args()
+    run(input_db_paths=opts.input_dbs, scratch_db_path=opts.scratch_db,
+        output_db_path=opts.output_db, force_rebuild_scratch=opts.force,
+        verbose=opts.verbose, quiet=opts.quiet)
 
 
-def run(opts):
-    set_up_logging(opts)
+def run(*,
+        force_rebuild_scratch=False,
+        input_db_paths=(),
+        output_db_path=DEFAULT_OUTPUT_DB,
+        quiet=False,
+        scratch_db_path=DEFAULT_SCRATCH_DB,
+        verbose=False):
 
-    build_scratch_db(
-        opts.input_dbs, opts.scratch_db, force=opts.force)
+    set_up_logging(verbose=verbose, quiet=quiet)
+
+    build_scratch_db(scratch_db_path, input_db_paths,
+                     force=force_rebuild_scratch)
+
+    build_output_db(scratch_db_path, output_db_path)
 
 
-def set_up_logging(opts):
+def set_up_logging(*, verbose=False, quiet=False):
     level = logging.INFO
-    if opts.verbose:
+    if verbose:
         level = logging.DEBUG
-    elif opts.quiet:
+    elif quiet:
         level = logging.WARN
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
 

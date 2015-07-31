@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Building the scratch (intermediate) database."""
 from logging import getLogger
 from os import remove
 from os import rename
@@ -27,8 +28,24 @@ log = getLogger(__name__)
 
 
 def build_scratch_db(
-        input_db_paths, scratch_db_path, *, force=False):
+        scratch_db_path, input_db_paths, *, force=False):
+    """Take data from the various input databases, and put it into
+    a single, indexed database with correct table definitions.
 
+    Does nothing if the scratch DB is newer than all the input
+    DBs, unless *force* is true.
+
+    Unlike the output database, every table in the scratch database
+    has a scraper_id field. The names of each input database are used
+    as a "namespace" which is prepended to the scraper_id value
+    (if any) in the input data. For example a row with scraper_id
+    "coca_cola" from a db named sr.company.sqlite would end up in
+    the scratch DB with scraper_id value "sr.company.coca_cola".
+
+    This also cleans smart quotes, excess whitespace, etc. out of the
+    input data.
+    """
+    # TODO: might also want to apply custom corrections here
     if exists(scratch_db_path) and not force:
         mtime = getmtime(scratch_db_path)
         if all(exists(db_path) and getmtime(db_path) < mtime
@@ -37,27 +54,27 @@ def build_scratch_db(
                 scratch_db_path))
             return
 
-    log.info('building {}'.format(scratch_db_path))
+    scratch_db_tmp_path = scratch_db_path + '.tmp'
+    if exists(scratch_db_tmp_path):
+        remove(scratch_db_tmp_path)
 
-    tmp_scratch_db_path = scratch_db_path + '.tmp'
-    if exists(tmp_scratch_db_path):
-        remove(tmp_scratch_db_path)
+    log.info('building {}'.format(scratch_db_tmp_path))
 
-    with open_db(tmp_scratch_db_path) as scratch_db:
+    with open_db(scratch_db_tmp_path) as scratch_db:
 
         init_scratch_tables(scratch_db)
 
         for input_db_path in input_db_paths:
             log.info('dumping data from {} -> {}'.format(
-                input_db_path, tmp_scratch_db_path))
+                input_db_path, scratch_db_tmp_path))
 
             scraper_prefix = db_path_to_scraper_prefix(input_db_path)
             with open_db(input_db_path) as input_db:
 
                 dump_db_to_scratch(input_db, scratch_db, scraper_prefix)
 
-    log.info('moving {} -> {}'.format(tmp_scratch_db_path, scratch_db_path))
-    rename(tmp_scratch_db_path, scratch_db_path)
+    log.info('moving {} -> {}'.format(scratch_db_tmp_path, scratch_db_path))
+    rename(scratch_db_tmp_path, scratch_db_path)
 
 
 def init_scratch_tables(db):
