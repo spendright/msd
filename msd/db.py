@@ -15,6 +15,15 @@ import sqlite3
 from itertools import groupby
 
 
+def create_index(db, table_name, index_cols):
+    index_name = '_'.join([table_name] + list(index_cols))
+    index_sql = 'CREATE INDEX `{}` ON `{}` ({})'.format(
+            index_name, table_name, ', '.join(
+                '`{}`'.format(ic) for ic in index_cols))
+
+    db.execute(index_sql)
+
+
 def insert_row(db, table_name, row):
     col_names, values = list(zip(*sorted(row.items())))
 

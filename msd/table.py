@@ -144,4 +144,17 @@ TABLES = dict(
         ),
         primary_key=['category', 'subcategory'],
     ),
+    url=dict(
+        columns=dict(
+            url='text',
+            last_scraped='text',
+            facebook_url='text',
+            twitter_handle='text',
+        ),
+        indexes=[
+            ['url'],
+        ],
+        output=False,
+        primary_key=['scraper_id', 'url'],
+    ),
 )

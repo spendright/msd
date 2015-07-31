@@ -19,6 +19,7 @@ from os.path import exists
 from os.path import getmtime
 
 from msd.clean import clean_value
+from msd.db import create_index
 from msd.db import insert_row
 from msd.db import open_db
 from msd.db import show_tables
@@ -77,7 +78,7 @@ def build_scratch_db(
     rename(scratch_db_tmp_path, scratch_db_path)
 
 
-def init_scratch_tables(db):
+def init_scratch_tables(scratch_db):
     """Add tables to the given (open) SQLite DB."""
     for table_name, table_def in sorted(TABLES.items()):
         columns = table_def['columns'].copy()
@@ -87,18 +88,17 @@ def init_scratch_tables(db):
             table_name, ', '.join(
                 '`{}` {}'.format(col_name, col_type)
                 for col_name, col_type in sorted(columns.items())))
-        db.execute(create_sql)
+        scratch_db.execute(create_sql)
 
-        index_cols = list(table_def.get('primary_key') or ())
+        # add "primary key" index
+        index_cols = list(table_def.get('primary_key', ()))
         if 'scraper_id' not in index_cols:
             index_cols = ['scraper_id'] + index_cols
-        index_name = '_'.join([table_name] + index_cols)
+        create_index(scratch_db, table_name, index_cols)
 
-        index_sql = 'CREATE INDEX `{}` ON `{}` ({})'.format(
-            index_name, table_name, ', '.join(
-                '`{}`'.format(ic) for ic in index_cols))
-
-        db.execute(index_sql)
+        # add other indexes
+        for index_cols in table_def.get('indexes', ()):
+            create_index(scratch_db, table_name, index_cols)
 
 
 def db_path_to_scraper_prefix(path):
