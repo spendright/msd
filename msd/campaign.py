@@ -16,6 +16,7 @@ from logging import getLogger
 from msd.merge import create_output_table
 from msd.merge import merge_dicts
 from msd.merge import output_row
+from msd.url import match_urls
 from msd.db import select_groups
 
 log = getLogger(__name__)
@@ -31,5 +32,5 @@ def build_campaign_table(output_db, scratch_db):
         if not campaign_id:
             continue
 
-        campaign_row = merge_dicts(rows)
+        campaign_row = merge_dicts(rows + match_urls(rows, scratch_db))
         output_row(output_db, 'campaign', campaign_row)
