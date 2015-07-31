@@ -135,7 +135,7 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
         insert_row(scratch_db, table_name, row)
 
 
-def select_all_values(scratch_db, cols):
+def select_distinct_values(scratch_db, cols):
     """Get all distinct values of the given list of columns from
     any table that has all of the given columns."""
     values = set()
@@ -145,9 +145,10 @@ def select_all_values(scratch_db, cols):
         if set(cols) - set(table_def['columns']) - {'scraper_id'}:
             continue
 
-        select_sql = 'SELECT {} FROM `{}`'.format(
-            ', '.join('`{}`'.format(col) for col in cols),
-            table_name)
+        cols_sql = ', '.join('`{}`'.format(col) for col in cols)
+
+        select_sql = 'SELECT {} FROM `{}` GROUP BY {}'.format(
+            cols_sql, table_name, cols_sql)
         for row in scratch_db.execute(select_sql):
             values.add(tuple(row))
 
