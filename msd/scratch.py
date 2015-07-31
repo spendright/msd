@@ -18,11 +18,11 @@ from os import rename
 from os.path import exists
 from os.path import getmtime
 
-from msd.clean import clean_value
 from msd.db import create_index
 from msd.db import insert_row
 from msd.db import open_db
 from msd.db import show_tables
+from msd.norm import clean_string
 from msd.table import TABLES
 
 log = getLogger(__name__)
@@ -177,10 +177,16 @@ def clean_input_row(row, table_name):
     extra columns."""
     table_def = TABLES.get(table_name, {})
     valid_cols = set(table_def.get('columns', ())) | {'scraper_id'}
-    clean_kwarg_map = table_def.get('clean_kwargs', {})
 
-    return dict(
-        (col_name, clean_value(value,
-                               **clean_kwarg_map.get(col_name, {})))
-        for col_name, value in row.items()
-        if col_name in valid_cols)
+    cleaned = {}
+
+    for col_name, value in sorted(row.items()):
+        if col_name not in valid_cols:
+            continue
+
+        if isinstance(value, str):
+            value = clean_string(value)
+
+        cleaned[col_name] = value
+
+    return cleaned

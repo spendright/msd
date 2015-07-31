@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Normalization of data, mostly strings."""
 import re
 import unicodedata
 
@@ -37,28 +38,25 @@ BAD_CODEPOINTS = {
 }
 
 
-def clean_value(v,
-                translate_bad_chars=True,
-                strip=True,
-                compact_whitespace=True,
-                normalize_unicode=True):
-
-    if isinstance(v, bytes):
+def clean_string(s, *,
+                 compact_whitespace=True,
+                 normalize_unicode=True,
+                 strip=True,
+                 translate_bad_chars=True):
+    """Clean messy strings from the outside world."""
+    if not isinstance(s, str):
         raise TypeError
 
-    if not isinstance(v, str):
-        return v
-
     if normalize_unicode:
-        v = unicodedata.normalize('NFKD', v)
+        s = unicodedata.normalize('NFKD', s)
 
     if translate_bad_chars:
-        v = v.translate(BAD_CODEPOINTS)
+        s = s.translate(BAD_CODEPOINTS)
 
     if compact_whitespace:
-        v = WHITESPACE_RE.sub(' ', v).strip()
+        s = WHITESPACE_RE.sub(' ', s).strip()
 
     if strip:
-        v = v.strip()
+        s = s.strip()
 
-    return v
+    return s
