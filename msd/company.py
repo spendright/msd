@@ -26,6 +26,7 @@ from .company_data import COMPANY_TYPE_CORRECTIONS
 from .company_data import COMPANY_TYPE_RE
 from .company_data import UNSTRIPPABLE_COMPANIES
 from .company_data import UNSTRIPPABLE_COMPANY_TYPES
+from .db import select_groups
 from .merge import create_output_table
 from .merge import group_by_keys
 from .merge import merge_dicts
@@ -33,6 +34,7 @@ from .merge import output_row
 from .norm import norm
 from .norm import simplify_whitespace
 from .scratch import get_distinct_values
+from .url import match_urls
 
 log = getLogger(__name__)
 
@@ -45,7 +47,40 @@ CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
 def build_company_table(output_db, scratch_db):
     log.info('  building company table')
     create_output_table(output_db, 'company')
-    log.warning('    NOT YET IMPLEMENTED')
+
+    company_sql = (
+        'SELECT * from company WHERE scraper_id = ? and company = ?')
+
+    company_full_sql = (
+        'SELECT company_name FROM company_name WHERE company = ?'
+        ' AND is_full = 1')
+
+    for (company,), scraper_map_rows in select_groups(
+            output_db, 'scraper_company_map', ['company']):
+        company_rows = []
+
+        # get company rows from each scraper
+        for scraper_map_row in scraper_map_rows:
+            scraper_id = scraper_map_row['scraper_id']
+            scraper_company = scraper_map_row['scraper_company']
+
+            company_rows.extend(
+                dict(row) for row in
+                scratch_db.execute(
+                    company_sql, [scraper_id, scraper_company]))
+
+        # get full company name from the company_name table we built
+        company_full = list(output_db.execute(
+            company_full_sql, [company]))[0][0]
+
+        # build final company row
+        company_row = merge_dicts(
+            [dict(company=company, company_full=company_full)] +
+            match_urls(company_rows, scratch_db) +
+            company_rows)
+
+        # output it
+        output_row(output_db, 'company', company_row)
 
 
 def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
