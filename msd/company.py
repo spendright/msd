@@ -277,3 +277,15 @@ def get_company_aliases(company):
 
     # remove short/empty matches
     return set(a for a in aliases if len(a) > 1)
+
+
+def map_company(output_db, scraper_id, scraper_company):
+    """Get the canonical company corresponding to the
+    given company in the scraper data."""
+    select_sql = ('SELECT company FROM scraper_company_map'
+                  ' WHERE scraper_id = ? AND scraper_company = ?')
+    rows = list(output_db.execute(select_sql, [scraper_id, scraper_company]))
+    if rows:
+        return rows[0][0]
+    else:
+        return None
