@@ -13,6 +13,7 @@
 # limitations under the License.
 from logging import getLogger
 
+from .db import select_groups
 from .merge import create_output_table
 
 log = getLogger(__name__)
@@ -27,4 +28,25 @@ def build_brand_table(output_db, scratch_db):
 def build_scraper_brand_map_table(output_db, scratch_db):
     log.info('  building scraper_brand_map table')
     create_output_table(output_db, 'scraper_brand_map')
-    log.warning('    NOT YET IMPLEMENTED')
+
+    # TODO: will need to redo this by company family tree
+    for (company,), company_map_rows in select_groups(
+            output_db, 'scraper_company_map', ['company']):
+
+        scraper_companies = set(
+            (row['scraper_id'], row['scraper_company'])
+            for row in company_map_rows)
+
+        fill_brands_for_company(
+            output_db, scratch_db, company, scraper_companies)
+
+
+def fill_brands_for_company(output_db, scratch_db, company, scraper_companies):
+    company_name_sql = (
+        'SELECT `company_name` FROM `company_name` where `company` = ?')
+
+    company_names = set(row[0] for row in
+                        output_db.execute(company_name_sql, [company]))
+
+    company_names  # shh, pyflakes
+    log.warning('    {}: NOT IMPLEMENTED'.format(company))

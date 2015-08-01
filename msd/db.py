@@ -55,10 +55,13 @@ def select_groups(db, table_name, key_cols, cols=None):
     if isinstance(key_cols, str):
         raise TypeError
 
-    select_sql = 'SELECT {} FROM `{}` GROUP BY {}'.format(
-        '*' if cols is None else ', '.join('`{}`'.format(c) for c in cols),
-        table_name,
-        ', '.join('`{}`'.format(kc) for kc in key_cols))
+    col_sql = '*'
+    if cols:
+        col_sql = ', '.join('`{}`'.format(c) for c in cols)
+    key_sql = ', '.join('`{}`'.format(kc) for kc in key_cols)
+
+    select_sql = 'SELECT {} FROM `{}` GROUP BY {} ORDER BY {}'.format(
+        col_sql, table_name, key_sql, key_sql)
 
     for key, rows in groupby(
             db.execute(select_sql),
