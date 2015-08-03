@@ -15,6 +15,7 @@ import re
 from functools import lru_cache
 from logging import getLogger
 
+from .brand import select_brands
 from .company_data import BAD_COMPANY_ALIASES
 from .company_data import BAD_COMPANY_NAMES
 from .company_data import COMPANY_ALIASES
@@ -96,8 +97,6 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
 
     cds = []
 
-    # TODO: move this to a scraper (company_name table)
-
     # populate with hard-coded company names
     for aliases in COMPANY_ALIASES:
         cds.append(dict(aliases=aliases, names=set(), scraper_companies=set()))
@@ -147,12 +146,22 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
     for cd_group in group_by_keys(cds, keyfunc):
         cd = merge_dicts(cd_group)
 
-        if not (cd['scraper_companies'] and cd['names']):
+        if not cd['scraper_companies']:
             # this can happen if hard-coded variants don't match anything
             continue
 
-        company = pick_company_name(cd['names'])
-        company_full = pick_company_full(cd['names'])
+        # promote aliases to display names if they match a brand
+        brands = select_brands(scratch_db, cd['scraper_companies'])
+        normed_brands = {norm(b) for b in brands}
+        names = cd['names'] | {
+            a for a in cd['aliases'] if norm(a) in normed_brands}
+
+        if not names:
+            continue
+
+        # pick company name and full name
+        company = pick_company_name(names)
+        company_full = pick_company_full(names)
 
         # write to scraper_company_map
         for scraper_id, scraper_company in sorted(cd['scraper_companies']):
@@ -162,9 +171,9 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
                 scraper_company=scraper_company))
 
         # write to company_name
-        for company_name in sorted(cd['names'] | cd['aliases']):
+        for company_name in sorted(names | cd['aliases']):
             row = dict(company=company, company_name=company_name)
-            if (company_name not in cd['names'] or
+            if (company_name not in names or
                 (company_name in BAD_COMPANY_NAMES and
                  company_name != company)):
                 row['is_alias'] = 1

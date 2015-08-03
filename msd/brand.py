@@ -21,7 +21,7 @@ from .merge import group_by_keys
 from .merge import merge_dicts
 from .merge import output_row
 from .norm import smunch
-from .scratch import tables_with_cols
+from .scratch import scratch_tables_with_cols
 
 log = getLogger(__name__)
 
@@ -58,7 +58,7 @@ def fill_brands_for_company(output_db, scratch_db, company, scraper_companies):
     bds = []
 
     # get all brand info
-    for table_name in tables_with_cols(['company', 'brand']):
+    for table_name in scratch_tables_with_cols(['company', 'brand']):
         select_sql = ('SELECT brand FROM `{}`'
                       ' WHERE scraper_id = ? and company = ?'.format(
                           table_name))
@@ -104,6 +104,36 @@ def fill_brands_for_company(output_db, scratch_db, company, scraper_companies):
                 scraper_company=scraper_company))
 
 
+def select_brands(scratch_db, scraper_companies):
+    """Get all possible brand names for the given company(s)."""
+    brands = set()
+
+    for scraper_id, scraper_company in scraper_companies:
+        for scraper_brand in select_scraper_brands(
+                scratch_db, scraper_id, scraper_company):
+            brand, _ = split_brand_and_tm(scraper_brand)
+            if brand:
+                brands.add(brand)
+
+    return brands
+
+
+def select_scraper_brands(scratch_db, scraper_id, scraper_company):
+    """Select all (scraper) brands for the given scraper company."""
+    scraper_brands = set()
+
+    for table_name in scratch_tables_with_cols(['company', 'brand']):
+        select_sql = ('SELECT brand FROM `{}`'
+                      ' WHERE scraper_id = ? and company = ?'.format(
+                          table_name))
+
+        for row in scratch_db.execute(
+                select_sql, [scraper_id, scraper_company]):
+            scraper_brands.add(row[0])
+
+    return scraper_brands
+
+
 def pick_brand_name(names, company_names=()):
     """Given several versions of a brand name, prefer the one
     that matches a company name, is not all-lowercase,
@@ -122,16 +152,11 @@ def pick_brand_name(names, company_names=()):
     return sorted(names, key=keyfunc, reverse=True)[0]
 
 
-
-
-
-
-
-def split_brand_and_tm(brand):
+def split_brand_and_tm(scraper_brand):
     """Split apart brand and TM/SM/(R) symbol, discarding anything
     after the symbol."""
-    m = TM_RE.search(brand)
+    m = TM_RE.search(scraper_brand)
     if m:
-        return brand[:m.start()].strip(), m.group()
+        return scraper_brand[:m.start()].strip(), m.group()
     else:
-        return brand.strip(), ''
+        return scraper_brand.strip(), ''
