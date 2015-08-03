@@ -27,12 +27,17 @@ def create_index(db, table_name, index_cols):
     db.execute(index_sql)
 
 
+def col_sql(col_names):
+    """Convert a list of column names to SQL."""
+    return ', '.join('`{}`'.format(col_name) for col_name in col_names)
+
+
 def insert_row(db, table_name, row):
     col_names, values = list(zip(*sorted(row.items())))
 
     insert_sql = 'INSERT INTO `{}` ({}) VALUES ({})'.format(
         table_name,
-        ', '.join('`{}`'.format(col_name) for col_name in col_names),
+        col_sql(col_names),
         ', '.join('?' for _ in col_names))
 
     db.execute(insert_sql, values)
@@ -55,20 +60,17 @@ def select_groups(db, table_name, key_cols, cols=None):
     if isinstance(key_cols, str):
         raise TypeError
 
-    col_sql = '*'
-    if cols:
-        col_sql = ', '.join('`{}`'.format(c) for c in cols)
-    key_sql = ', '.join('`{}`'.format(kc) for kc in key_cols)
+    from_cols_sql = col_sql(cols) if cols else '*'
+    key_sql = col_sql(key_cols)
 
     select_sql = 'SELECT {} FROM `{}` GROUP BY {} ORDER BY {}'.format(
-        col_sql, table_name, key_sql, key_sql)
+        from_cols_sql, table_name, key_sql, key_sql)
 
     for key, rows in groupby(
             db.execute(select_sql),
             key=lambda r: tuple(r[kc] for kc in key_cols)):
 
         yield key, [dict(row) for row in rows]
-
 
 def show_tables(db):
     """List the tables in the given db."""

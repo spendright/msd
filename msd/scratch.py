@@ -152,16 +152,18 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
         insert_row(scratch_db, table_name, row)
 
 
+def tables_with_cols(cols):
+    cols = set(cols)
+    return [table_name for table_name, table_def in sorted(TABLES.items())
+            if not (cols - set(table_def['columns']) - {'scraper_id'})]
+
+
 def get_distinct_values(scratch_db, cols):
     """Get all distinct values of the given list of columns from
     any table that has all of the given columns."""
     values = set()
 
-    for table_name, table_def in sorted(TABLES.items()):
-        # skip tables that don't have all the columns
-        if set(cols) - set(table_def['columns']) - {'scraper_id'}:
-            continue
-
+    for table_name in tables_with_cols(cols):
         cols_sql = ', '.join('`{}`'.format(col) for col in cols)
 
         select_sql = 'SELECT {} FROM `{}` GROUP BY {}'.format(

@@ -66,4 +66,10 @@ def to_title_case(s):
 
 
 def norm(s):
+    """Remove accents and convert to lowercase."""
     return unidecode(s).lower()
+
+
+def smunch(s):
+    """Like norm(), except we remove whitespace too."""
+    return WHITESPACE_RE.sub('', s)
