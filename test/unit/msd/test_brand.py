@@ -20,7 +20,8 @@ from msd.brand import split_brand_and_tm
 class TestSplitBrandAndTM(TestCase):
 
     def test_empty(self):
-        self.assertEqual(split_brand_and_tm(''), ('', ''))
+        self.assertEqual(split_brand_and_tm(None), ('', ''))
+        self.assertEqual(split_brand_and_tm(None), ('', ''))
 
     def test_plain_brand(self):
         self.assertEqual(split_brand_and_tm('Panasonic'), ('Panasonic', ''))
@@ -35,3 +36,6 @@ class TestSplitBrandAndTM(TestCase):
     def test_strip(self):
         self.assertEqual(split_brand_and_tm(' RTFM ™ '),
                          ('RTFM', '™'))
+
+    def test_on_tm(self):
+        self.assertEqual(split_brand_and_tm('™'), ('', '™'))

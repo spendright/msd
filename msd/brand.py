@@ -22,6 +22,7 @@ from .merge import merge_dicts
 from .merge import output_row
 from .norm import smunch
 from .scratch import scratch_tables_with_cols
+from .url import match_urls
 
 log = getLogger(__name__)
 
@@ -32,7 +33,39 @@ TM_RE = re.compile('(®|\u2120|™)', re.U)
 def build_brand_table(output_db, scratch_db):
     log.info('  building brand table')
     create_output_table(output_db, 'brand')
-    log.warning('    NOT YET IMPLEMENTED')
+
+    brand_sql = (
+        'SELECT * from brand'
+        ' WHERE scraper_id = ? and company = ? and brand = ?')
+
+
+    for (company, brand), scraper_map_rows in select_groups(
+            output_db, 'scraper_brand_map', ['company', 'brand']):
+
+        tms = {''}  # valid values for tm field
+        brand_rows = []  # rows from brand table to merge
+
+        for scraper_map_row in scraper_map_rows:
+            tms.add(split_brand_and_tm(scraper_map_row['scraper_brand'])[1])
+
+            for brand_row in scratch_db.execute(
+                    brand_sql, [scraper_map_row['scraper_id'],
+                                scraper_map_row['scraper_company'],
+                                scraper_map_row['scraper_brand']]):
+                brand_rows.append(dict(brand_row))
+                tms.add(split_brand_and_tm(brand_row['tm'])[1])
+
+        # build final brand row
+        brand_row = merge_dicts(
+            [dict(company=company, brand=brand)] +
+             match_urls(brand_rows, scratch_db) +
+             brand_rows)
+
+        # make sure we get a valid value for tm
+        brand_row['tm'] = sorted(tms, reverse=True)[0]
+
+        # output it
+        output_row(output_db, 'brand', brand_row)
 
 
 def build_scraper_brand_map_table(output_db, scratch_db):
@@ -155,6 +188,8 @@ def pick_brand_name(names, company_names=()):
 def split_brand_and_tm(scraper_brand):
     """Split apart brand and TM/SM/(R) symbol, discarding anything
     after the symbol."""
+    scraper_brand = scraper_brand or ''
+
     m = TM_RE.search(scraper_brand)
     if m:
         return scraper_brand[:m.start()].strip(), m.group()
