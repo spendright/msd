@@ -195,3 +195,17 @@ def split_brand_and_tm(scraper_brand):
         return scraper_brand[:m.start()].strip(), m.group()
     else:
         return scraper_brand.strip(), ''
+
+
+def map_brand(output_db, scraper_id, scraper_company, scraper_brand):
+    """Get the canonical company corresponding to the
+    given brand in the scraper data."""
+    select_sql = ('SELECT company, brand FROM scraper_brand_map'
+                  ' WHERE scraper_id = ? AND scraper_company = ?'
+                  ' AND scraper_brand = ?')
+    rows = list(output_db.execute(
+        select_sql, [scraper_id, scraper_company, scraper_brand]))
+    if rows:
+        return tuple(rows[0])
+    else:
+        return None

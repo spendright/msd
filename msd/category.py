@@ -21,10 +21,14 @@ from .category_data import CATEGORY_ALIASES
 from .category_data import CATEGORY_SPLITS
 from .db import select_groups
 from .merge import create_output_table
+from .merge import merge_dicts
 from .merge import output_row
 from .norm import simplify_whitespace
 from .norm import to_title_case
 from .scratch import get_distinct_values
+from .target import select_target_groups
+from .target import select_and_map_by_targets
+
 
 log = getLogger(__name__)
 
@@ -34,7 +38,27 @@ CATEGORY_SPLIT_RE = re.compile(r',?\s+and\s+|,\s+|\.\s+|\s*/\s*')
 def build_category_table(output_db, scratch_db):
     log.info('  building category table')
     create_output_table(output_db, 'category')
-    log.warning('    NOT YET IMPLEMENTED')
+
+    # slice by target
+    for (scraper_company, scraper_brand), target_map_rows in \
+             select_target_groups(output_db):
+
+        # map rows for target to category
+        category_to_rows = defaultdict(list)
+
+        for category_row in select_and_map_by_targets(
+                scratch_db, 'category', target_map_rows):
+            category = map_category(output_db,
+                                    category_row['scraper_id'],
+                                    category_row['category'])
+            if category:
+                category_to_rows[category].append(category_row)
+
+        for category, category_rows in sorted(category_to_rows.items()):
+            category_row = merge_dicts(
+                [dict(category=category)] + category_rows)
+
+            output_row(output_db, 'category', category_row)
 
 
 def build_scraper_category_map_table(output_db, scratch_db):
