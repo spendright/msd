@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#   Copyright 2014 SpendRight, Inc.
+#   Copyright 2014-2015 SpendRight, Inc.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,85 +13,69 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import logging
-from argparse import ArgumentParser
+"""Harness for running msd on morph.io. Downloads source databases
+and merges them into data.sqlite.
+
+To run this, you'll need a free morph.io account. Set MORPH_API_KEY
+to the value of your key.
+"""
+from logging import getLogger
 from os import environ
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
-from sres.category import get_category_map
-from sres.category import output_subcategory_table
-from sres.category import output_scraper_category_map
-from sres.company import handle_matched_company
-from sres.company import match_companies
-from sres.company import name_company
-from sres.db import close_output_db
-from sres.db import download_and_merge_dbs
-from sres.db import init_output_db
-from sres.db import output_row
-from sres.db import select_all_campaigns
-from sres.url import merge_with_url_data
+from msd.cmd import run
+from msd.cmd import set_up_logging
 
 
-log = logging.getLogger('scraper')
+SCRAPER_DATA = {
+    'sr.company': 'https://morph.io/spendright/scrape-companies/data.sqlite',
+    'sr.campaign': 'https://morph.io/spendright/scrape-campaigns/data.sqlite',
+    'sr.url': 'https://morph.io/spendright/scrape-urls/data.sqlite',
+}
+
+CHUNK_SIZE = 1024  # for download()
+
+OUTPUT_PATH = 'data.sqlite'
+
+log = getLogger('scraper')
 
 
 def main():
-    opts = parse_args()
+    if 'MORPH_API_KEY' not in environ:
+        raise ValueError(
+            'Must set MORPH_API_KEY to download scraper data'.format(db_name))
 
-    level = logging.INFO
-    if opts.verbose or environ.get('MORPH_VERBOSE'):
-        level = logging.DEBUG
-    elif opts.quiet:
-        level = logging.WARN
-    logging.basicConfig(format='%(name)s: %(message)s', level=level)
-
-    # initialize output DB
-    init_output_db()
-
-    # create merged data
-    download_and_merge_dbs(force=opts.force)
-
-    # campaigns
-    log.info('Outputting campaign table')
-    for campaign_row in select_all_campaigns():
-        log.info(u'campaign: {}'.format(campaign_row['campaign_id']))
-        campaign_row = merge_with_url_data(campaign_row)
-        output_row(campaign_row, 'campaign')
-
-    # category map
-    log.info('Outputting scraper_category_map table')
-    category_map = get_category_map()
-    output_scraper_category_map(category_map)
-
-    # category, subcategory
-    log.info('Outputting subcategory table')
-    cat_to_ancestors = output_subcategory_table(category_map)
-
-    # everything else
-    log.info('Matching up companies')
-    # handle in more-or-less alphabetical order
-    cds = sorted(match_companies(), key=lambda cd: name_company(cd)[0])
-
-    log.info('Outputting company data (all other tables)')
-    for cd in cds:
-        handle_matched_company(cd, category_map, cat_to_ancestors)
-
-    close_output_db()
+    set_up_logging(quiet=environ.get('MORPH_QUIET'),
+                   verbose=environ.get('MORPH_VERBOSE'))
 
 
-def parse_args(args=None):
-    parser = ArgumentParser()
-    parser.add_argument(
-        '-v', '--verbose', dest='verbose', default=False, action='store_true',
-        help='Enable debug logging')
-    parser.add_argument(
-        '-q', '--quiet', dest='quiet', default=False, action='store_true',
-        help='Turn off info logging')
-    parser.add_argument(
-        '-f', '--force', dest='force', default=False, action='store_true',
-        help='Force download of DBs and building of merged DB')
+    input_paths = []
 
-    return parser.parse_args(args)
+    for scraper_id, url in sorted(SCRAPER_DATA.items()):
+        full_url = '{}?{}'.format(
+            url, urlencode(dict(key=environ['MORPH_API_KEY'])))
+        path = scraper_id + '.sqlite'
 
+        # don't show API key in output
+        log.info('downloading {} -> {}'.format(url, path))
+        download(full_url, path)
+        input_paths.append(path)
+
+    run(force_rebuild_scratch=True,
+        input_db_paths=input_paths,
+        output_db_path=OUTPUT_PATH)
+
+
+
+def download(url, path):
+    with open(path, 'wb') as f:
+        with urlopen(url) as src:
+            while True:
+                chunk = src.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                f.write(chunk)
 
 
 if __name__ == '__main__':
