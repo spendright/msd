@@ -25,20 +25,18 @@ log = logging.getLogger('msd.cmd')
 
 def main(args=None):
     opts = parse_args()
+
+    set_up_logging(verbose=opts.verbose, quiet=opts.quiet)
+
     run(input_db_paths=opts.input_dbs, scratch_db_path=opts.scratch_db,
-        output_db_path=opts.output_db, force_rebuild_scratch=opts.force,
-        verbose=opts.verbose, quiet=opts.quiet)
+        output_db_path=opts.output_db, force_rebuild_scratch=opts.force)
 
 
 def run(*,
         force_rebuild_scratch=False,
         input_db_paths=(),
         output_db_path=DEFAULT_OUTPUT_DB,
-        quiet=False,
-        scratch_db_path=DEFAULT_SCRATCH_DB,
-        verbose=False):
-
-    set_up_logging(verbose=verbose, quiet=quiet)
+        scratch_db_path=DEFAULT_SCRATCH_DB):
 
     build_scratch_db(scratch_db_path, input_db_paths,
                      force=force_rebuild_scratch)
