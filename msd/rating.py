@@ -13,7 +13,11 @@
 # limitations under the License.
 from logging import getLogger
 
+
 from .merge import create_output_table
+from .merge import merge_dicts
+from .merge import output_row
+from .target import select_groups_mapped_by_target
 
 log = getLogger(__name__)
 
@@ -21,4 +25,39 @@ log = getLogger(__name__)
 def build_rating_table(output_db, scratch_db):
     log.info('  building rating table')
     create_output_table(output_db, 'rating')
-    log.warning('    NOT YET IMPLEMENTED')
+
+    def keyfunc(row):
+        return row['campaign_id']
+
+    # slice by target
+    for campaign_id, rating_rows in select_groups_mapped_by_target(
+            output_db, scratch_db, 'rating', lambda row: row['campaign_id']):
+
+        if not (campaign_id):
+            continue
+
+        rating_row = merge_dicts(rating_rows)
+        rating_row['judgment'] = fix_judgment(rating_row['judgment'])
+
+        # fill min_score
+        if (rating_row.get('score') is not None and
+            rating_row.get('min_score') is None):
+
+            rating_row['min_score'] = 0
+
+        output_row(output_db, 'rating', rating_row)
+
+
+def fix_judgment(judgment):
+    """Make sure judgment is -1, 0, 1, or None."""
+    try:
+        judgment = float(judgment)
+    except TypeError:
+        return None
+
+    if judgment > 0:
+        return 1
+    elif judgment < 0:
+        return -1
+    else:
+        return 0

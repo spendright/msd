@@ -34,7 +34,7 @@ BRAND_CORRECTIONS = {
 # incorrect brand information for particular scrapers
 # this maps scraper_id to company name used by that scraper
 IGNORE_BRANDS = {
-    'campaigns:climate_counts': {
+    'sr.campaign.climate_counts': {
         'Baxter International': None,
         'Britax': None,
         'Clorox': None,
@@ -52,7 +52,7 @@ IGNORE_BRANDS = {
         "Wendy's": None,  # used to be part of a conglomerate, now just Wendy's
         'eBay': {'GE'},  # ???
     },
-    'campaigns:free2work': {
+    'sr.campaign.free2work': {
         'Bob Barker Company': {  # makes prison supplies
             'Comfort Zone',
             'Liberty',  # heh

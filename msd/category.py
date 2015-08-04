@@ -26,8 +26,7 @@ from .merge import output_row
 from .norm import simplify_whitespace
 from .norm import to_title_case
 from .scratch import get_distinct_values
-from .target import select_target_groups
-from .target import select_and_map_by_targets
+from .target import select_groups_mapped_by_target
 
 
 log = getLogger(__name__)
@@ -39,26 +38,22 @@ def build_category_table(output_db, scratch_db):
     log.info('  building category table')
     create_output_table(output_db, 'category')
 
-    # slice by target
-    for (scraper_company, scraper_brand), target_map_rows in \
-             select_target_groups(output_db):
+    def get_category(row):
+        return map_category(output_db,
+                            row['scraper_id'],
+                            row['category'])
 
-        # map rows for target to category
-        category_to_rows = defaultdict(list)
+    for category, category_rows in select_groups_mapped_by_target(
+            output_db, scratch_db, 'category', get_category):
 
-        for category_row in select_and_map_by_targets(
-                scratch_db, 'category', target_map_rows):
-            category = map_category(output_db,
-                                    category_row['scraper_id'],
-                                    category_row['category'])
-            if category:
-                category_to_rows[category].append(category_row)
+        if not category:
+            continue
 
-        for category, category_rows in sorted(category_to_rows.items()):
-            category_row = merge_dicts(
-                [dict(category=category)] + category_rows)
+        category_row = merge_dicts(
+            [dict(category=category)] + category_rows)
 
-            output_row(output_db, 'category', category_row)
+        output_row(output_db, 'category', category_row)
+
 
 
 def build_scraper_category_map_table(output_db, scratch_db):

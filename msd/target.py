@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for targets, which can be either companies or brands."""
+from collections import defaultdict
+
 from .brand import map_brand
 from .company import map_company
 from .db import select_groups
@@ -30,7 +32,27 @@ def map_target(output_db, scraper_id, scraper_company, scraper_brand=''):
             return (company, '')
 
 
-def select_target_groups(output_db):
+def select_groups_mapped_by_target(output_db, scratch_db, table_name, keyfunc):
+    """Yield lists of rows from the scratch DB corresponding to the same
+    company, brand, and key (the result of keyfunc(row)).
+
+    company and brand in the rows returned will the the canonical,
+    company/brand, not the values in the scratch DB.
+    """
+    for (company, brand), target_map_rows in _select_target_groups(output_db):
+        key_to_rows = defaultdict(list)
+
+        for row in _select_and_map_by_targets(
+                scratch_db, table_name, target_map_rows):
+
+            key = keyfunc(row)
+            key_to_rows[key].append(row)
+
+        for key, row_group in key_to_rows.items():
+            yield key, row_group
+
+
+def _select_target_groups(output_db):
     """Yield tuples of (company, brand), brand_map_row for all companies
     and brands."""
     # yield all brand mapping
@@ -43,14 +65,14 @@ def select_target_groups(output_db):
             output_db, 'scraper_company_map', ['company']):
         yield (company, ''), [dict(
             brand='',
-            company=r['company'],
+            company=company,
             scraper_brand='',
             scraper_company=r['scraper_company'],
             scraper_id=r['scraper_id'],
         ) for r in company_map_rows]
 
 
-def select_and_map_by_targets(scratch_db, table_name, target_map_rows):
+def _select_and_map_by_targets(scratch_db, table_name, target_map_rows):
     select_sql = (
         'SELECT * FROM `{}` WHERE scraper_id = ? AND'
         ' company = ? AND brand = ?'.format(table_name))
