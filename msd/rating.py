@@ -17,7 +17,7 @@ from logging import getLogger
 from .merge import create_output_table
 from .merge import merge_dicts
 from .merge import output_row
-from .target import select_groups_mapped_by_target
+from .target import select_groups_by_target
 
 log = getLogger(__name__)
 
@@ -30,13 +30,16 @@ def build_rating_table(output_db, scratch_db):
         return row['campaign_id']
 
     # slice by target
-    for campaign_id, rating_rows in select_groups_mapped_by_target(
-            output_db, scratch_db, 'rating', lambda row: row['campaign_id']):
+    for (company, brand), campaign_id, rating_rows in \
+        select_groups_by_target(
+            output_db, scratch_db, 'rating', ['campaign_id']):
 
         if not (campaign_id):
             continue
 
         rating_row = merge_dicts(rating_rows)
+        rating_row['company'] = company
+        rating_row['brand'] = brand
         rating_row['judgment'] = fix_judgment(rating_row['judgment'])
 
         # fill min_score

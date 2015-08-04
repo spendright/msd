@@ -32,24 +32,27 @@ def map_target(output_db, scraper_id, scraper_company, scraper_brand=''):
             return (company, '')
 
 
-def select_groups_mapped_by_target(output_db, scratch_db, table_name, keyfunc):
-    """Yield lists of rows from the scratch DB corresponding to the same
-    company, brand, and key (the result of keyfunc(row)).
+def select_groups_by_target(
+        output_db, scratch_db, table_name, key_cols=()):
+    """Yield all rows from the given table, grouped by target (company/brand)
+    and, optionally, key_cols.
 
-    company and brand in the rows returned will the the canonical,
-    company/brand, not the values in the scratch DB.
+    Yields (company, brand), (key_col_value, ...), [row]
     """
+    if isinstance(key_cols, str):
+        raise TypeError
+
     for (company, brand), target_map_rows in _select_target_groups(output_db):
         key_to_rows = defaultdict(list)
 
-        for row in _select_and_map_by_targets(
+        for row in _select_by_targets(
                 scratch_db, table_name, target_map_rows):
 
-            key = keyfunc(row)
+            key = tuple(row[kc] for kc in key_cols)
             key_to_rows[key].append(row)
 
         for key, row_group in key_to_rows.items():
-            yield key, row_group
+            yield (company, brand), key, row_group
 
 
 def _select_target_groups(output_db):
@@ -72,7 +75,7 @@ def _select_target_groups(output_db):
         ) for r in company_map_rows]
 
 
-def _select_and_map_by_targets(scratch_db, table_name, target_map_rows):
+def _select_by_targets(scratch_db, table_name, target_map_rows):
     select_sql = (
         'SELECT * FROM `{}` WHERE scraper_id = ? AND'
         ' company = ? AND brand = ?'.format(table_name))
@@ -83,8 +86,4 @@ def _select_and_map_by_targets(scratch_db, table_name, target_map_rows):
                              target_map_row['scraper_company'],
                              target_map_row['scraper_brand']]):
 
-            row = dict(row)
-            row['company'] = target_map_row['company']
-            row['brand'] = target_map_row['brand']
-
-            yield row
+            yield dict(row)

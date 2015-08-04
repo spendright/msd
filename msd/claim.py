@@ -17,7 +17,7 @@ from .merge import create_output_table
 from .merge import merge_dicts
 from .merge import output_row
 from .rating import fix_judgment
-from .target import select_groups_mapped_by_target
+from .target import select_groups_by_target
 
 log = getLogger(__name__)
 
@@ -26,17 +26,17 @@ def build_claim_table(output_db, scratch_db):
     log.info('  building claim table')
     create_output_table(output_db, 'claim')
 
-    def keyfunc(row):
-        return row['campaign_id'], row['claim']
-
     # slice by target
-    for (campaign_id, claim), claim_rows in select_groups_mapped_by_target(
-            output_db, scratch_db, 'claim', keyfunc):
+    for (company, brand), (campaign_id, claim), claim_rows in \
+        select_groups_by_target(
+            output_db, scratch_db, 'claim', ['campaign_id', 'claim']):
 
         if not (campaign_id and claim):
             continue
 
         claim_row = merge_dicts(claim_rows)
+        claim_row['company'] = company
+        claim_row['brand'] = brand
         claim_row['judgment'] = fix_judgment(claim_row['judgment'])
 
         output_row(output_db, 'claim', claim_row)
