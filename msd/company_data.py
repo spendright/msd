@@ -51,7 +51,7 @@ DEFUNCT_COMPANIES = {
 # sets of names to match companies by
 COMPANY_ALIASES = [
     {'LG', 'LGE'},
-    {'AEO', 'American Eagle Outfitters'},
+    {'AEO', 'American Eagle', 'American Eagle Outfitters'},
     {'Merck', 'Schering-Plough'},  # merged into Merck
 ]
 
@@ -62,12 +62,14 @@ BAD_COMPANY_ALIASES = {
 
 # don't use these as display names unless we have no other options
 BAD_COMPANY_NAMES = {
+    'American Eagle',
     'LGE',
 }
 
 # sets of valid names for the same company
 COMPANY_NAMES = [
     {'AB Electrolux', 'Electrolux'},
+    {'American Eagle Outfitters'},
     {'Anheuser-Busch', 'Anheuser-Busch InBev'},
     {'ASUS', 'ASUSTeK Computer'},
     {'Disney', 'The Walt Disney Company', 'The Walt Disney Co.'},
