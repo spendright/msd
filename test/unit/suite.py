@@ -16,4 +16,7 @@ from unittest import defaultTestLoader
 
 
 def load_tests():
-    return defaultTestLoader.discover(dirname(__file__))
+    this_dir = dirname(__file__)
+    return defaultTestLoader.discover(
+        this_dir,
+        top_level_dir=this_dir + '/../..')

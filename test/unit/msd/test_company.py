@@ -13,16 +13,16 @@
 #   limitations under the License.
 from unittest import TestCase
 
-from msd.company import get_company_variants
+from msd.company import get_company_names
 
 
-class TestVariants(TestCase):
+class TestGetCompanyNames(TestCase):
 
     def test_empty(self):
-        self.assertEqual(get_company_variants(''), set())
+        self.assertEqual(get_company_names(''), set())
 
     def test_too_short(self):
-        self.assertEqual(get_company_variants('Y'), set())
+        self.assertEqual(get_company_names('Y'), set())
 
     def test_basic(self):
-        self.assertEqual(get_company_variants('Konica'), {'Konica'})
+        self.assertEqual(get_company_names('Konica'), {'Konica'})
