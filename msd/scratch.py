@@ -64,7 +64,7 @@ def build_scratch_db(
 
     with open_db(scratch_db_tmp_path) as scratch_db:
 
-        init_scratch_tables(scratch_db)
+        create_scratch_tables(scratch_db)
 
         for input_db_path in input_db_paths:
             log.info('dumping data from {} -> {}'.format(
@@ -79,23 +79,29 @@ def build_scratch_db(
     rename(scratch_db_tmp_path, scratch_db_path)
 
 
-def init_scratch_tables(scratch_db):
+def create_scratch_tables(scratch_db):
     """Add tables to the given (open) SQLite DB."""
-    for table_name, table_def in sorted(TABLES.items()):
-        columns = table_def['columns'].copy()
-        columns['scraper_id'] = 'text'
+    for table_name in sorted(TABLES):
+        create_scratch_table(scratch_db, table_name)
 
-        create_table(scratch_db, table_name, columns)
 
-        # add "primary key" (non-unique) index
-        index_cols = list(table_def.get('primary_key', ()))
-        if 'scraper_id' not in index_cols:
-            index_cols = ['scraper_id'] + index_cols
+def create_scratch_table(scratch_db, table_name):
+    table_def = TABLES[table_name]
+
+    columns = table_def['columns'].copy()
+    columns['scraper_id'] = 'text'
+
+    create_table(scratch_db, table_name, columns)
+
+    # add "primary key" (non-unique) index
+    index_cols = list(table_def.get('primary_key', ()))
+    if 'scraper_id' not in index_cols:
+        index_cols = ['scraper_id'] + index_cols
+    create_index(scratch_db, table_name, index_cols)
+
+    # add other indexes
+    for index_cols in table_def.get('indexes', ()):
         create_index(scratch_db, table_name, index_cols)
-
-        # add other indexes
-        for index_cols in table_def.get('indexes', ()):
-            create_index(scratch_db, table_name, index_cols)
 
 
 def db_path_to_scraper_prefix(path):
