@@ -19,6 +19,7 @@ from os.path import exists
 from os.path import getmtime
 
 from .db import create_index
+from .db import create_table
 from .db import insert_row
 from .db import open_db
 from .db import show_tables
@@ -84,13 +85,9 @@ def init_scratch_tables(scratch_db):
         columns = table_def['columns'].copy()
         columns['scraper_id'] = 'text'
 
-        create_sql = 'CREATE TABLE `{}` ({})'.format(
-            table_name, ', '.join(
-                '`{}` {}'.format(col_name, col_type)
-                for col_name, col_type in sorted(columns.items())))
-        scratch_db.execute(create_sql)
+        create_table(scratch_db, table_name, columns)
 
-        # add "primary key" index
+        # add "primary key" (non-unique) index
         index_cols = list(table_def.get('primary_key', ()))
         if 'scraper_id' not in index_cols:
             index_cols = ['scraper_id'] + index_cols

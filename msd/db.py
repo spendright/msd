@@ -15,6 +15,27 @@ import sqlite3
 from itertools import groupby
 
 
+def create_table(db, table_name, columns, primary_key=None):
+    """Create a table with the given columns and, optionally, primary key.
+
+    *columns* is a map from column name to type
+    *primary_key* is a list of column names
+    """
+
+    col_def_sql = ', '.join('`{}` {}'.format(col_name, col_type)
+                            for col_name, col_type in sorted(columns.items()))
+
+    # optional PRIMARY KEY
+    primary_key_sql = ''
+    if primary_key:
+        primary_key_sql = ', PRIMARY KEY({})'.format(col_sql(primary_key))
+
+    create_sql = 'CREATE TABLE `{}` ({}{})'.format(
+        table_name, col_def_sql, primary_key_sql)
+
+    db.execute(create_sql)
+
+
 def create_index(db, table_name, index_cols):
     if isinstance(index_cols, str):
         raise TypeError
