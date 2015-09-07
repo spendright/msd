@@ -12,10 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 """Utilities for testing databases."""
+import sqlite3
 from unittest import TestCase
 
 from msd.db import create_table
 from msd.db import create_index
+from msd.db import insert_row
+from msd.db import open_db
+from msd.merge import create_output_table
+from msd.scratch import create_scratch_table
 from msd.table import TABLES
 
 def make_table(db, table_name, rows=None, *, columns=None, primary_key=None,
@@ -55,13 +60,19 @@ def make_table(db, table_name, rows=None, *, columns=None, primary_key=None,
             insert_row(db, table_name, row)
 
 
+def select_all(db, table_name):
+    """Get all rows from a table, and sort (for easy testing of equality)."""
+    return sorted(
+        (dict(row) for row in
+         db.execute('SELECT * FROM `{}`'.format(table_name))),
+        key=lambda row: [(k, repr(v)) for (k, v) in row.items()])
 
 
 class DBTestCase(TestCase):
 
     def setUp(self):
-        self.output_db = sqlite3.connect(':memory:')
-        self.scratch_db = sqlite3.connect(':memory:')
+        self.output_db = open_db(':memory:')
+        self.scratch_db = open_db(':memory:')
         self._tmp_dir = None
 
     @property
@@ -72,14 +83,12 @@ class DBTestCase(TestCase):
 
         return self._tmp_dir
 
-    def make_scratch_tables(table_to_rows):
-        for table_name, rows in sorted(table_to_rows.items()):
-            create_scratch_table(self.scratch_db, table_name)
-            for row in rows:
-                insert_row(self.scratch_db, table_name, row)
+    def make_scratch_table(self, table_name, rows):
+        create_scratch_table(self.scratch_db, table_name)
+        for row in rows:
+            insert_row(self.scratch_db, table_name, row)
 
-    def make_output_tables(table_to_rows):
-        for table_name, rows in sorted(table_to_rows.items()):
-            create_output_table(self.output_db, table_name):
-            for row in rows:
-                insert_row(self.output_db, table_name, row)
+    def make_output_table(self, table_name, rows):
+        create_output_table(self.output_db, table_name)
+        for row in rows:
+            insert_row(self.output_db, table_name, row)

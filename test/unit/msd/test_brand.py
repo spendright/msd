@@ -14,7 +14,11 @@
 # limitations under the License.
 from unittest import TestCase
 
+from msd.brand import build_scraper_brand_map_table
 from msd.brand import split_brand_and_tm
+
+from ...db import DBTestCase
+from ...db import select_all
 
 
 class TestSplitBrandAndTM(TestCase):
@@ -39,3 +43,44 @@ class TestSplitBrandAndTM(TestCase):
 
     def test_on_tm(self):
         self.assertEqual(split_brand_and_tm('™'), ('', '™'))
+
+
+class TestBuildScraperBrandMapTable(DBTestCase):
+
+    def test_merge_differing_capitalization(self):
+        # this tests #19
+        self.make_scratch_table('brand', [
+            dict(brand='CardScan',
+                 company='Newell Rubbermaid',
+                 scraper_id='sr.campaign.hrc'),
+            dict(brand='Cardscan',
+                 company='Newell Rubbermaid',
+                 scraper_id='sr.campaign.hrc'),
+        ])
+        self.make_scratch_table('category', [])
+        self.make_scratch_table('claim', [])
+        self.make_scratch_table('rating', [])
+        self.make_scratch_table('scraper_brand_map', [])
+
+        self.make_output_table('company_name', [])
+        self.make_output_table('scraper_company_map', [
+            dict(company='Newell Rubbermaid',
+                 scraper_company='Newell Rubbermaid',
+                 scraper_id='sr.campaign.hrc')
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [dict(brand='CardScan',
+                  company='Newell Rubbermaid',
+                  scraper_brand='CardScan',
+                  scraper_company='Newell Rubbermaid',
+                  scraper_id='sr.campaign.hrc'),
+             dict(brand='CardScan',
+                  company='Newell Rubbermaid',
+                  scraper_brand='Cardscan',
+                  scraper_company='Newell Rubbermaid',
+                  scraper_id='sr.campaign.hrc'),
+            ])
