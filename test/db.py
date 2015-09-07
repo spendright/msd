@@ -23,42 +23,8 @@ from msd.merge import create_output_table
 from msd.scratch import create_scratch_table
 from msd.table import TABLES
 
-def make_table(db, table_name, rows=None, *, columns=None, primary_key=None,
-               indexes=None):
-    """Create a table, with rows already filled.
 
-    *rows* is a list of dictionaries mapping column name to value
-    *columns* is a map from column name to type
-    *primary_key* is a list of column names in primary key
-    *indexes* is a list of lists of column names in each (non-unique) index
-
-    """
-    # column definitions
-    if columns is None:
-        columns = {}
-    else:
-        columns = columns.copy()
-
-    # make sure there's a column for each row
-    if rows:
-        for row in rows:
-            for col_name in row:
-                if col_name not in columns:
-                    columns[col_name] = 'TEXT'
-
-    # create the table
-    create_table(db, table_name, columns, primary_key)
-
-    # create indexes
-    if indexes:
-        for index_cols in indexes:
-            craete_index(db, table_name, index_cols)
-
-    # insert rows
-    if rows:
-        for row in rows:
-            insert_row(db, table_name, row)
-
+# stuff that could be in msd.db, but that we only use for testing
 
 def select_all(db, table_name):
     """Get all rows from a table, and sort (for easy testing of equality)."""
@@ -68,12 +34,31 @@ def select_all(db, table_name):
         key=lambda row: [(k, repr(v)) for (k, v) in row.items()])
 
 
+def insert_rows(db, table_name, rows):
+    """Call insert_row() multiple times."""
+    for row in rows:
+        insert_row(db, table_name, row)
+
+
+
 class DBTestCase(TestCase):
+
+    # output_tables to create at setup time
+    OUTPUT_TABLES = []
+
+    # scratch tables to create at setup time
+    SCRATCH_TABLES = []
 
     def setUp(self):
         self.output_db = open_db(':memory:')
         self.scratch_db = open_db(':memory:')
         self._tmp_dir = None
+
+        for table_name in self.SCRATCH_TABLES:
+            create_scratch_table(self.scratch_db, table_name)
+
+        for table_name in self.OUTPUT_TABLES:
+            create_output_table(self.output_db, table_name)
 
     @property
     def tmp_dir(self):
@@ -82,13 +67,3 @@ class DBTestCase(TestCase):
             self.addCleanup(rmtree, self._tmp_dir)
 
         return self._tmp_dir
-
-    def make_scratch_table(self, table_name, rows):
-        create_scratch_table(self.scratch_db, table_name)
-        for row in rows:
-            insert_row(self.scratch_db, table_name, row)
-
-    def make_output_table(self, table_name, rows):
-        create_output_table(self.output_db, table_name)
-        for row in rows:
-            insert_row(self.output_db, table_name, row)
