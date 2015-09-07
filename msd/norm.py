@@ -72,4 +72,4 @@ def norm(s):
 
 def smunch(s):
     """Like norm(), except we remove whitespace too."""
-    return WHITESPACE_RE.sub('', s)
+    return WHITESPACE_RE.sub('', norm(s))
