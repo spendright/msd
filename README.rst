@@ -299,10 +299,10 @@ proper noun.
 **date**: optional date this claim was made, in ``YYYY-MM-DD``,
 ``YYYY-MM``, or ``YYYY`` format. A string, not a number.
 
-**judgment**: -1, 0, or 1. Does the claim say something good (`1`), mixed
-(`0`), or bad (`-1`) about the company or brand? Need not match the campaign's
-rating. If a claim is totally neutral (e.g. ``manufactures large appliances``)
-it doesn't belong in this table at all!
+**judgment**: -1, 0, or 1. Does the claim say something good (``1``), mixed
+(``0``), or bad (``-1``) about the company or brand? Need not match the
+campaign's rating. If a claim is totally neutral (e.g.
+``manufactures large appliances``) it doesn't belong in this table at all!
 
 **scope**: optional free-form limitation on which products this applies to
 (e.g. ``Fair Trade``). Usually an empty string, to mean no limitation or that
@@ -382,12 +382,13 @@ a company.
 **date**: optional date this rating was last updated, in ``YYYY-MM-DD``,
 ``YYYY-MM``, or ``YYYY`` format. A string, not a number.
 
-**grade**: optional letter grade (e.g. `A+`, `C-`, `F`). You see `E` some
-places too.
+**grade**: optional letter grade (e.g. ``A+``, ``C-``, ``F``). Some campaigns
+use ``E`` instead of ``F``.
 
-**judgment**: -1, 0, or 1. Should consumers support (`1`), consider
-(`0`), or avoid (`-1`) the company or brand? Some campaigns give everything
-a `1` (e.g. certifiers) or everything a `-1` (e.g. a boycott campaign).
+**judgment**: -1, 0, or 1. Should consumers support (``1``), consider
+(``0``), or avoid (``-1``) the company or brand? Some campaigns will give
+everything a ``1`` (e.g. certifiers, "The Top n Wonderful-est Companies") or
+everything a ``-1`` (e.g. boycott campaigns).
 
 ``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need to
 set it yourself. Red for avoid, yellow for consider, and green for support
