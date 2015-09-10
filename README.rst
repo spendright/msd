@@ -287,7 +287,8 @@ claim: bullet points to support ratings
 **brand**: canonical name for the brand. Empty string if this is a claim
 about a company.
 
-**campaign_id**: ID of campaign making this claim
+**campaign_id**: unique identifier of campaign making this claim (see
+``campaign.campaign_id``)
 
 **claim**: free-form claim. Should be small enough to fit in a bullet point,
 and be able to stand on its own (spell out obscure acronyms and other context).
@@ -375,7 +376,8 @@ This is where the magic happens.
 **brand**: canonical name for the brand. Empty string if this is a rating of
 a company.
 
-**campaign_id**: ID of campaign making this claim
+**campaign_id**: unique identifier of campaign this rating comes from (see
+``campaign.campaign_id``)
 
 **company**: canonical name for the company
 
@@ -387,8 +389,8 @@ use ``E`` instead of ``F``.
 
 **judgment**: -1, 0, or 1. Should consumers support (``1``), consider
 (``0``), or avoid (``-1``) the company or brand? Some campaigns will give
-everything a ``1`` (e.g. certifiers, "The Top n Wonderful-est Companies") or
-everything a ``-1`` (e.g. boycott campaigns).
+everything a ``1`` (e.g. certifiers) or everything a ``-1`` (e.g. boycott
+campaigns).
 
 ``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need to
 set it yourself. Red for avoid, yellow for consider, and green for support
@@ -399,8 +401,8 @@ and ask.*
 scale (a number).
 
 **min_score**: if ``score`` is set, the lowest score possible on the rating
-scale (a number). *If you set* ``score`` *but not* ``min_score``, ``msd``
-*will assume* ``min_score`` *is zero*.
+scale (a number). *If* ``score`` *is set but* ``min_score`` *is not,* ``msd``
+*will assume* ``min_score`` *is zero.*
 
 **num_ranked**: if ``rank`` is set, the number of things ranked (an integer)
 
@@ -412,7 +414,7 @@ scale (a number). *If you set* ``score`` *but not* ``min_score``, ``msd``
 it's only *not* some scope elsewhere in the data (don't set this to
 ``Non-Certified``).
 
-**score**: optional numerical score
+**score**: optional numerical score (e.g. ``57.5``).
 
 **url**: optional link to web page/PDF document etc. where this rating was
 made. Some people like to see the supporting data!
