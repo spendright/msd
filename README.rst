@@ -78,17 +78,20 @@ Finally, the initial data sources each get a ``scraper_id``, which is one
 or more identifiers, separated by dots (e.g. ``sr.campaign.wwf_palm_oil``).
 These serve only to help you track down problems in your input data.
 
-*Every table in the input data may have a* ``scraper_id`` *field. The stem
+*Every table in the input data may have a* ``scraper_id`` *field to help
+identify which code gathered that data. The stem
 of whatever input file data came from will be prepended to form the*
-``scraper_id`` *in the output. For example, a* ``scraper_id`` *of
+``scraper_id`` *in the output.*
+
+*For example, a* ``scraper_id`` *of*
 ``wwf_palm_oil`` *from an input file named* ``sr.campaign.sqlite``
 *would become* ``sr.campaign.wwf_palm_oil`` *in the output data.*
 
 Messy input data
 ----------------
 
-``msd`` *can accept very messy input data. The goal is for you to be able to
-put the minimal effort possible into writing a scraper.*
+``msd`` *can accept very, very messy input data. The goal is for you to be
+able as little effort as possible into writing scrapers.*
 
 no primary keys
 ^^^^^^^^^^^^^^^
