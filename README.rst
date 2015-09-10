@@ -563,6 +563,8 @@ Working on msd
 3. Then it creates the output database (``msd.sqlite``) and fills it table by
    table (look for ``msd.fill_output_db()``).
 
+Also, table definitions live in ``msd/table.py``.
+
 
 Using msd as a library
 ======================
