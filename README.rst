@@ -87,7 +87,7 @@ Messy Input Data
 ``msd`` *can accept very messy input data. The goal is for you to be able to
 put the minimal effort possible into writing a scraper.*
 
-no Primary Keys
+no primary keys
 ^^^^^^^^^^^^^^^
 
 *For starters, the input data need not have primary keys, or any keys at
@@ -102,9 +102,9 @@ missing/extra fields
 
 *It's totally fine for the input data to be missing fields, or have
 fields set to* ``NULL`` *that are supposed to have a value (in the worst case,
-if you omit a required value,* ``msd`` *will just ignore that row.
+if you omit a required value,* ``msd`` *will just ignore that row.*
 
-It's fine to have extra fields;* ``msd`` *will just ignore them.*
+*It's fine to have extra fields;* ``msd`` *will just ignore them.*
 
 different names for companies and brands
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -119,11 +119,10 @@ general text cleanliness
 
 - *converts all whitespace (tabs, double spaces, etc.) to a single space*
 - *strips leading and trailing whitespace*
-- *converts "smart quotes", ligatures, and other silliness to the plain equivalent*
-- *normalizes all unicode into
-  `NFKD <http://www.unicode.org/reports/tr15/#Norm_Forms>`__
-  (this basically means there aren't multiple ways to represent the same
-  accented character).*
+- *converts "smart quotes", ligatures, and other silliness to the plain
+  equivalent*
+- *normalizes all unicode into NFKD form (this basically means there aren't
+  multiple ways to represent the same accented character).*
 
 brand name cleaning
 ^^^^^^^^^^^^^^^^^^^
@@ -182,7 +181,7 @@ this to 1 in your input data to knock out out-of-date brand information from
 out-of-date consumer campaigns.
 
 **is_licensed**: 0 or 1. If 1, this brand actually belongs to another company
-(e.g. The Coca Cola Company markets products under the Evian brand).
+(e.g. The Coca-Cola Company markets products under the Evian brand).
 Generally a good idea to put the responsiblity for a brand on its actual
 owner.
 
@@ -207,7 +206,7 @@ campaign: consumer campaigns
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practice, introducing consumer campaigns to users is one of the
-most important part of any tool you build; you'll probably want to just use
+most important parts of any tool you build; you'll probably want to just use
 this table as a starting point, and include some content of your own.
 
 **Primary Key**: ``campaign_id``
@@ -388,7 +387,7 @@ places too.
 
 **judgment**: -1, 0, or 1. Should consumers support (`1`), consider
 (`0`), or avoid (`-1`) the company or brand? Some campaigns give everything
-a `1` (e.g. the B Corp List) or everything a `-1` (e.g. a boycott campaign).
+a `1` (e.g. certifiers) or everything a `-1` (e.g. a boycott campaign).
 
 ``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need to
 set it yourself. Red for avoid, yellow for consider, and green for support
@@ -399,7 +398,7 @@ and ask.*
 scale (a number).
 
 **min_score**: if ``score`` is set, the lowest score possible on the rating
-scale (a number). *If you set* ``score`` *but not* ``min_score``*,* ``msd``
+scale (a number). *If you set* ``score`` *but not* ``min_score``, ``msd``
 *will assume* ``min_score`` *is zero*.
 
 **num_ranked**: if ``rank`` is set, the number of things ranked (an integer)
@@ -432,7 +431,7 @@ scraper: when data was last gathered
 scraper_brand_map: names of brands in the input data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is mostly useful for figuring out where weird output data came from.
+This is mostly useful for debugging your output data.
 
 ``msd`` *ignores this table if it appears in the input data*
 
@@ -456,7 +455,7 @@ brand and company name
 scraper_category_map: names of categories in the intput data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is mostly useful for figuring out where weird output data came from.
+This is mostly useful for debugging your output data.
 
 ``msd`` *ignores this table if it appears in the input data*
 
@@ -476,7 +475,7 @@ category name
 scraper_company_map: names of companies in the input data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is mostly useful for figuring out where weird output data came from.
+This is mostly useful for debugging your output data.
 
 ``msd`` *ignores this table if it appears in the input data*
 
@@ -544,7 +543,7 @@ scraper on `morph.io <https://morph.io/>`__, which can also handle scrapers
 in Ruby, PHP, Perl, and Node.js. See the
 `morph.io Documentation <https://morph.io/documentation>`__ for details.
 And let us know, so we can point
-`morph.io/spendright/msd <https://morph.io/spendright/msd>`__ at it.
+`msd's morph.io page <https://morph.io/spendright/msd>`__ at it.
 
 
 Working on msd
@@ -554,7 +553,18 @@ Working on msd
 
 1. ``msd`` starts in ``msd/cmd.py`` (look for ``msd.cmd.run()``).
 2. It first dumps all the input data into a temporary "scratch" DB
-(``msd-scratch.sqlite``) with the correct columns and useful indexes (look
-for ``msd.scratch.build_scratch_db()``).
+   (``msd-scratch.sqlite``) with the correct columns and useful indexes (look
+   for ``msd.scratch.build_scratch_db()``).
 3. Then it creates the output database (``msd.sqlite``) and fills it table by
-table (look for ``msd.fill_output_db()``).
+   table (look for ``msd.fill_output_db()``).
+
+
+Using msd as a library
+======================
+
+``msd`` isn't really a library, but there's some useful stuff in ``msd``
+(for example, ``msd/company.py`` knows how to strip all the various versions
+of "Inc." off company names).
+
+If you want to call some of this stuff from another project, please let us
+know so that we can work out a sane, stable interface for you!
