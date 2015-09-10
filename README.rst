@@ -15,10 +15,11 @@ them at all, different apps that don't talk to each other.
 puts it into a single unified format.
 
 ``msd`` currently powers `SpendRight <http://spendright.org/search>`__
-(the author) and the `thinkContext <http://thinkcontext.org>`__ browser
+(``msd``'s creator) and the `thinkContext <http://thinkcontext.org>`__ browser
 extension.
 
-Using the Data
+
+Using the data
 ==============
 
 If you're not there already, check out
@@ -28,9 +29,11 @@ view and download data merged from SpendRight's scrapers.
 Keep in mind that the original consumer campaigns are generally copyrighted by
 the non-profits that created them, and they have all sorts of different
 terms/licensing agreements. It's up to you to decide whether to ask
-them for permission now, or forgiveness later. (This applies mostly to the
-``claim`` and ``rating`` tables; the facts about companies and brands are
-almost certainly fair game.)
+them for permission now, or forgiveness later.
+
+(This mostly applies to the ``claim`` and ``rating`` tables; facts about
+companies and brands are almost certainly fair game.)
+
 
 Usage
 =====
@@ -44,7 +47,7 @@ If you don't have the library installed (or are doing development), you
 can use ``python -m msd.cmd`` in place of ``msd``.
 
 
-Data Format
+Data format
 ===========
 
 ``msd`` uses a SQLite data format, both for input and output.
@@ -81,7 +84,7 @@ of whatever input file data came from will be prepended to form the*
 ``wwf_palm_oil`` *from an input file named* ``sr.campaign.sqlite``
 *would become* ``sr.campaign.wwf_palm_oil`` *in the output data.*
 
-Messy Input Data
+Messy input data
 ----------------
 
 ``msd`` *can accept very messy input data. The goal is for you to be able to
@@ -129,10 +132,11 @@ brand name cleaning
 
 *In addition, you can be* even lazier *with the* ``brand`` *field.* ``msd``
 *automatically finds ™, ®, etc., puts it elsewhere for safekeeping (see
-the* ``tm`` *field, below), and ignores anything after it. For example,
-if you throw something like* ``INVOKANA™ (canagliflozin) USPI`` *into
-the* ``brand`` *field, it'll know that the brand is named* ``INVOKANA``
-*and is supposed to have a ™ after it.*
+the* ``tm`` *field, below), and ignores anything after it.*
+
+*For example, if you throw something like*
+``INVOKANA™ (canagliflozin) USPI`` *into the* ``brand`` *field, it'll know
+that the brand is named* ``INVOKANA`` *and is supposed to have a ™ after it.*
 
 category name cleaning
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -159,7 +163,8 @@ and that's not all...
 
 Nope, that's pretty much everything. Here are the table definitions:
 
-Table Definitions
+
+Table definitions
 -----------------
 
 brand: facts about brands
