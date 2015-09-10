@@ -77,7 +77,6 @@ TABLES = dict(
             feedback_url='text',
             hq_country='text',
             logo_url='text',
-            parent_company='text',
             phone='text',
             twitter_handle='text',
             url='text',
