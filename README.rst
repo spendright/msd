@@ -1,19 +1,132 @@
-Scrapers for Consumer Campaigns
-===============================
+Merge Scraper Data (for great justice!)
+=======================================
 
-The goal of this project is to scrape consumer campaign data into a
-common format so that any tool (e.g. websites, browser extensions, apps)
-can help people be a part of any consumer campaign.
+There are a lot of consumer campaigns out there on the Internet. Consumer
+campaigns supported by perfectly lovely organizations, organized around
+causes you wholeheartedly support, that would change the world if enough
+people followed through on them.
 
-This "scraper" doesn't actually scrape web pages directly; it's job is
-to merge and clean up data from the
-`campaigns <https://morph.io/spendright-scrapers/campaigns>`__ scraper,
-so that, for example, a company will be referred to the same way across
-campaigns. Eventually, we'll also merge in master company data scraped
-directly from company websites.
+But it's hard to put them into practice. And it's *really* hard to put more
+than one campaign at a time into practice. Different campaigns have different
+scoring systems, different names for the same company, and, when they have
+them at all, different apps.
 
-This is a project of `SpendRight <http://spendright.org>`__. You can
-contact the author (SpendRight, Inc.) at dave@spendright.org.
+``msd`` takes messy data from a bunch of different consumer campaigns, and
+puts it into a single unified format. Each brand and
+company gets a single, canonical name and ratings are tagged with
+support/consider/avoid so that you can see at a glance what you should buy
+and what you shouldn't. It also builds the best information it can about
+which brands are owned by any given company, and what sort of product
+categories those companies and brands are involved in.
+
+``msd`` currently powers `SpendRight <http://spendright.org/search>`__
+(the author) and the `thinkContext <http://thinkcontext.org>`__ browser
+extension.
+
+Using the Data
+==============
+
+If you're not there already, check out
+`msd's morph.io page <https://morph.io/spendright/msd>`__, where you can
+view and download data merged from SpendRight's scrapers.
+
+Keep in mind that the original consumer campaigns are generally copyrighted by
+the non-profits that created them, and they have all sorts of different
+terms/licensing agreements. It's up to you to decide whether to ask
+them for permission now, or forgiveness later. (This applies mostly to the
+``claim`` and ``rating`` tables; the facts about companies and brands are
+almost certainly fair game.)
+
+Usage
+=====
+
+``msd db1.sqlite [db2.sqlite ...]``
+
+This produces a file named ``msd.sqlite`` (you can change this with the ``-o``
+switch).
+
+If you don't have the library installed (or are doing development), you
+can use ``python -m msd.cmd`` in place of ``msd``.
+
+
+Data Format
+===========
+
+``msd`` uses a SQLite data format, both for input and output.
+
+The input and output format are almost identical; differences are noted
+in *italics*.
+
+Keys
+----
+
+Every campaign in the input data should have a ``campaign_id``
+that would work as a Python identifier (for example ``wwf_palm_oil``).
+
+There isn't a ``company_id`` field though; we just use the shortest name
+that a company is commonly referred to by. For example, ``msd`` is smart
+enough to figure out that The Coca-Cola Company can be referred to as
+simply ``Coca-Cola`` (``The Coca-Cola Company`` appears in a field called
+``company_full``; see below).
+
+Similarly, there isn't a ``brand_id`` field, ``msd`` just figures out the
+proper name for the brand (minus the ™, etc.), and puts it into the ``brand``
+field; the "key" for any given brand is ``company`` and ``brand`` together.
+
+There also aren't (product) category keys; we just put the name of the
+category (e.g. ``Chocolate``) into the ``category`` field. ``msd`` tries to
+give category names consistent capitalization and formatting, but there
+isn't a well-defined category tree per see; see the ``subcategory`` table
+below for details.
+
+Finally, the initial data sources each get a ``scraper_id``, which is one
+or more identifiers, separated by dots (e.g. ``sr.campaign.wwf_palm_oil``).
+These serve only to help you track down problems in your input data.
+
+*Every table in the input data may have a ``scraper_id`` field. The stem
+of whatever input file data came from will be prepended to form the
+``scraper_id`` in the output. For example, a ``scraper_id`` of
+``wwf_palm_oil`` from an input file named ``sr.campaign.sqlite``
+would become ``sr.campaign.wwf_palm_oil`` in the output data.*
+
+Messy Input Data
+----------------
+
+*``msd`` can accept very messy input data. The goal is for you to be able to
+put the minimal effort possible into writing a scraper.*
+
+*For starters, the input data need not have primary keys, or any keys at
+all. The first thing we do is shovel all the input data into a single
+"scratch" table anyways.*
+
+*It's totally fine to have two rows that* would *have the same keys in the
+output data; ``msd`` will merge them for you.*
+
+*It's totally fine for the input data to be missing fields, or have
+fields set to ``NULL`` that are supposed to have a value. And it's fine
+to have extra fields; ``msd`` will just ignore them.*
+
+*For every text field, `msd` does the following things for you:*
+
+- *converts all whitespace (tabs, double spaces, etc.) to a single space*
+- *strips leading and trailing whitespace*
+- *converts "smart quotes", ligatures, and other silliness to the plain equivalent*
+- *normalizes all unicode into
+  NFKD <http://www.unicode.org/reports/tr15/#Norm_Forms>`
+  (this basically means there aren't multiple ways to represent the same
+  accented character).*
+
+*In addition, you can be* even lazier *with the `brand` field. ``msd``
+automatically finds ™, ®, etc., puts it elsewhere for safekeeping (see
+the ``tm`` field, below), and ignores anything after it. For example,
+if you throw something like ``INVOKANA™ (canagliflozin) USPI`` into
+the ``brand`` field, it'll know that the brand is named ``INVOKANA``
+and is supposed to have a ™ after it.*
+
+Table Definitions
+-----------------
+
+
 
 Data format
 -----------
@@ -52,6 +165,7 @@ category, and map it to the normalized version we've chosen.
 
 General fields
 --------------
+
 
 Here are some of the fields used in these tables:
 
