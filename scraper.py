@@ -13,8 +13,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Harness for running msd on morph.io. Downloads source databases
-and merges them into data.sqlite.
+"""This is just a hook for morph.io. Downloads a hard-coded list of
+data from other morph.io scrapers, and merges them into data.sqlite.
 
 To run this, you'll need a free morph.io account. Set MORPH_API_KEY
 to the value of your key.

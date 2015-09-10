@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Just code for building the "scraper" table. Not to be confused with
+../scraper.py, which is a hook for morph.io."""
 from logging import getLogger
 
 from .db import select_groups
