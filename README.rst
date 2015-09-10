@@ -59,20 +59,17 @@ Every campaign in the input data should have a ``campaign_id``
 that would work as a Python identifier (for example ``wwf_palm_oil``).
 
 There isn't a ``company_id`` field though; we just use the shortest name
-that a company is commonly referred to by. For example, ``msd`` is smart
-enough to figure out that The Coca-Cola Company can be referred to as
-simply ``Coca-Cola`` (``The Coca-Cola Company`` appears in a field called
-``company_full``; see below).
+that a company is commonly referred to by.``msd`` is smart
+enough to know that, for example, The Coca-Cola Company can be called
+``Coca-Cola`` but that we can't refer to The Learning Company as simply
+"Learning".
 
 Similarly, there isn't a ``brand_id`` field, ``msd`` just figures out the
 proper name for the brand (minus the ™, etc.), and puts it into the ``brand``
 field; the "key" for any given brand is ``company`` and ``brand`` together.
 
 There also aren't (product) category keys; we just put the name of the
-category (e.g. ``Chocolate``) into the ``category`` field. ``msd`` tries to
-give category names consistent capitalization and formatting, but there
-isn't a well-defined category tree per see; see the ``subcategory`` table
-below for details.
+category (e.g. ``Chocolate``) into the ``category`` field.
 
 Finally, the initial data sources each get a ``scraper_id``, which is one
 or more identifiers, separated by dots (e.g. ``sr.campaign.wwf_palm_oil``).
@@ -90,6 +87,9 @@ Messy Input Data
 ``msd`` *can accept very messy input data. The goal is for you to be able to
 put the minimal effort possible into writing a scraper.*
 
+no Primary Keys
+^^^^^^^^^^^^^^^
+
 *For starters, the input data need not have primary keys, or any keys at
 all. The first thing we do is shovel all the input data into a single
 "scratch" table anyways.*
@@ -97,9 +97,23 @@ all. The first thing we do is shovel all the input data into a single
 *It's totally fine to have two rows that* would *have the same keys in the
 output data;* ``msd`` *will merge them for you.*
 
+missing/extra fields
+^^^^^^^^^^^^^^^^^^^^
+
 *It's totally fine for the input data to be missing fields, or have
-fields set to* ``NULL`` *that are supposed to have a value. And it's fine
-to have extra fields;* ``msd`` *will just ignore them.*
+fields set to* ``NULL`` *that are supposed to have a value (in the worst case,
+if you omit a required value,* ``msd`` *will just ignore that row.
+
+It's fine to have extra fields;* ``msd`` *will just ignore them.*
+
+different names for companies and brands
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*It's fine to use different names for the same company
+or brand;* ``msd`` *will figure this out and merge them as appropriate.*
+
+general text cleanliness
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 *For every text field,* ``msd`` *does the following things for you:*
 
@@ -111,6 +125,9 @@ to have extra fields;* ``msd`` *will just ignore them.*
   (this basically means there aren't multiple ways to represent the same
   accented character).*
 
+brand name cleaning
+^^^^^^^^^^^^^^^^^^^
+
 *In addition, you can be* even lazier *with the* ``brand`` *field.* ``msd``
 *automatically finds ™, ®, etc., puts it elsewhere for safekeeping (see
 the* ``tm`` *field, below), and ignores anything after it. For example,
@@ -118,9 +135,30 @@ if you throw something like* ``INVOKANA™ (canagliflozin) USPI`` *into
 the* ``brand`` *field, it'll know that the brand is named* ``INVOKANA``
 *and is supposed to have a ™ after it.*
 
+category name cleaning
+^^^^^^^^^^^^^^^^^^^^^^
+
+``msd`` *formats category names in a consistent way. For example,*
+``food & beverages`` *in the input data would become* ``Food and Beverages``
+*in the output data.*
+
+rating cleanup
+^^^^^^^^^^^^^^
+
+``msd`` can do limited cleanup of ratings, including inferring ``judgment``
+from ``grade``. See ``rating`` table for details.
+
+inferred rows
+^^^^^^^^^^^^^
+
 ``msd`` *will infer that companies and brands exist. For example, if you
-include a rating for a company in the* ``rating`` *table, a corresponsding
+include a rating for a company in the* ``rating`` *table, a corresponding
 entry will be automatically created for you in the* ``company`` *table.*
+
+and that's not all...
+^^^^^^^^^^^^^^^^^^^^^
+
+Nope, that's pretty much everything. Here are the table definitions:
 
 Table Definitions
 -----------------
@@ -134,7 +172,7 @@ brand: facts about brands
 
 **company**: canonical name for the company (e.g. ``Unilever``)
 
-**facebook_url**: Optional link to official Facebook page for the brand. (If
+**facebook_url**: optional link to official Facebook page for the brand. (If
 there's only a page for the company, put that in ``company.facebook_url``).
 So consumers can say nice/brutally honest things on their Facebook page.
 
@@ -152,150 +190,343 @@ owner.
 only (so you probably can't buy it on, like, Amazon.com).
 
 **logo_url**: 0 or 1. Optional link to an image of this brand's logo (need not
-be to the brand's website).
+be on the brand's website).
 
 **tm**: empty string, ``™``, ``®`` or ``℠``. The thing that companies like to
 appear directly after the brand name.
 
-**twitter_handle**: handle on Twitter, including the ``@`` (e.g.
-``@Electrolux``. So consumers can congratulate them/call them out on
-Twitter.
+**twitter_handle**: optional handle for the brand's Twitter account, including
+the ``@`` (e.g. ``@BrownCowYogurt``). So consumers can congratulate them/call
+them out on Twitter.
 
 **url**: optional link to official web site/page for this brand. It's okay
 if this is just a sub-page of the company's official website.
 
 
+campaign: consumer campaigns
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In practice, introducing consumer campaigns to users is one of the
+most important part of any tool you build; you'll probably want to just use
+this table as a starting point, and include some content of your own.
+
+**Primary Key**: ``campaign_id``
+
+**author**: optional free-form name of the organization behind the campaign
+(e.g. ``Greenpeace International``).
+
+**author_url**: optional link to author's website
+
+**campaign**: free-form name of the campaign (e.g.
+``Guide to Greener Electronics``)
+
+**campaign_id**: unique identifier for this campaign (e.g.
+``greenpeace_electronics``.) Up to you to pick something that makes sense
+and doesn't collide with other campaign IDs.
+
+**contributors**: optional free-form description of other contributors
+to the consumer campaign (e.g.
+``International Labor Rights Forum, Baptist World Aid``).
+
+**copyright**: optional copyright notice. Usually starts with ``©`` (e.g.
+``© 2006-2014 Climate Counts. All Rights Reserved.``).
+
+**date**: optional date this campaign was created, in ``YYYY-MM-DD``,
+``YYYY-MM``, or ``YYYY`` format. A string, not a number. Sometimes the
+best available data is a couple years old, and consumers deserve to know!
+
+**donate_url**: optional link to a page where you can donate back to the
+campaign/author. Try to include this somewhere in whatever you build; create a
+virtuous cycle and help these consumer campaigns become financially
+self-sustaining!
+
+**email**: optional contact email for the campaign (e.g.
+``feedback@free2work.org``)
+
+**facebook_url**: optional link to official Facebook page for the campaign,
+so consumers can get involved in the movement!
+
+**goal**: very brief (40 characters or less) description of what someone
+helps accomplish by being involved in this campaign (e.g.
+``stop forced labor in Uzbekistan``). Best to start this with a lowercase
+letter unless the first word is a proper noun.
+
+**twitter_handle**: optional handle for the campaign's Twitter account, so
+that consumers can follow/reference them on Twitter. Including the ``@``
+(e.g. ``@WWF``).
+
+**url**: optional link to campaign's web site, so consumers can learn more
+and get involved.
 
 
+category: product categories for companies and brands
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Data format
------------
+``msd`` doesn't build an organized category tree like, say, online retailers
+have; these are more like hints. See the ``subcategory`` table for details.
 
-The scraper outputs several SQLite tables.
+**Primary Key**: ``company``, ``brand``, ``category``
 
-``campaign`` contains basic information about the campaign, such as its
-name, its author, and its URL. Each campaign has an ID (e.g.
-``'hope4congo'``), which appears in the ``campaign_id`` field.
+**brand**: canonical name for the brand. Empty string if we're categorizing
+a company
 
-``company`` contains facts about a company, such as its full, official
-name (``company_full``), URL, and so on and so on.
+**category**: free-form name for category (e.g. ``Food and Beverages``).
 
-There *isn't* a ``company_id`` field; rather, this scraper finds a
-recognizable, short name, for each company (e.g. "Coca-Cola", "HP")
-which appears in the ``company`` field, and that works as a key.
-``company`` is also suitable to be displayed to users.
+**company**: canonical name for the company
 
-Just like with companies, ``brand`` contains facts about a company. The
-``brand`` field should contain the official spelling of a brand, minus
-the ™ or ® symbol. ``company`` and ``brand`` together make the unique
-key for a brand.
-
-The ``category`` table has one row for each category that each
-company/brand is in (``brand`` is set to ``''`` for companies).
-
-``rating`` contains the meat of the campaign data: should I buy from
-this brand/company? The keys for these tables are ``campaign_id``,
-``company``, and ``brand`` (``''`` for companies), plus a free-text
-field, ``scope``, to handle things like a rating applying to a company's
-fair trand products.
-
-The various ``scraper_*_map`` tables are mostly for debugging; they tell
-the name that the original source used for a company, brand, or
-category, and map it to the normalized version we've chosen.
-
-General fields
---------------
+**is_implied**: 0 or 1. If 1, this category was only implied by a subcategory
+relationship (see ``subcategory`` table). *Ignored in the input data.*
 
 
-Here are some of the fields used in these tables:
+claim: bullet points to support ratings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  brand: The name of a brand.
--  campaign: The name of a campaign (not "name" for consistency with
-   "brand" and "category"). Only used in the ``campaign`` table;
-   everywhere else, ``campaign_id`` is better.
--  campaign\_id: The module name of the scraper this information came
-   from. In every table.
--  category: A free-form category description (e.g. "Chocolate")
--  company: The name of a company.
--  date: The date a rating was published. This is in ISO format
-   (YYYY-MM-DD), though in some cases we omit the day or even the month.
-   A string, not a number!
--  goal: VERY compact description of campaign's goal. Five words max.
--  scope: Used to limit a rating to a particular subset of products
-   (e.g. "Fair Trade"). You can have multiple ratings of the same
-   brand/company with different scopes.
--  url: The canonical URL for a campaign, company, etc. Other ``*_url``
-   fields are pretty common, for example ``donate_url``.
+**Primary Key**: ``campaign_id``, ``company``, ``brand``, ``scope``, ``claim``
 
-The scrapers whose data we use are allowed to add other fields as needed
-(e.g. ``twitter_handle``, ``feedback_url``), so this list isn't
-comprehensive.
+(``claim`` is free-form, so this is more like a non-unique key)
 
-Rating fields
--------------
+**brand**: canonical name for the brand. Empty string if this is a claim
+about a company.
 
-Some fields used specifically for ``rating``:
+**campaign_id**: ID of campaign making this claim
 
--  score: a numerical score, where higher is better. Used with
-   min\_score and max\_score.
--  grade: a US-style letter grade (e.g. A-, C+). Also works for A-E
-   rating systems such as used on
-   `rankabrand <http://rankabrand.org/>`__ and
-   `CDP <https://www.cdp.net/>`__
--  rank: a ranking, where 1 is best. Used with num\_ranked.
--  description: a free-text description that works as a rating (e.g.
-   "Cannot recommend")
--  caveat: free-text useful information that is tangential to the main
-   purpose of the campaign (e.g. "high in mercury" for a campaign about
-   saving fisheries).
+**claim**: free-form claim. Should be small enough to fit in a bullet point,
+and be able to stand on its own (spell out obscure acronyms and other context).
+Best to start this with a lowercase letter unless the first word is a
+proper noun.
 
-This is all very descriptive, but not terribly useful if you want to,
-say, compare how a brand fares in several consumer campaigns at once.
-That's what the ``judgment`` field is for:
+**company**: canonical name for the company
 
--  judgment: 1 for "support", -1 for "avoid" and 0 for something in
-   between ("consider")
+**date**: optional date this claim was made, in ``YYYY-MM-DD``,
+``YYYY-MM``, or ``YYYY`` format. A string, not a number.
 
-Flag fields
------------
+**judgment**: -1, 0, or 1. Does the claim say something good (`1`), mixed
+(`0`), or bad (`-1`) about the company or brand? Need not match the campaign's
+rating. If a claim is totally neutral (e.g. ``manufactures large appliances``)
+it doesn't belong in this table at all!
 
-The main use case for this is to match consumer products, so it's
-helpful to know if a brand applies to a service, prescription only, or
-only marketed to other businesses. We use flags like ``is_prescription``
-to call out edge cases like this. For example:
+**scope**: optional free-form limitation on which products this applies to
+(e.g. ``Fair Trade``). Usually an empty string, to mean no limitation or that
+it's only *not* some scope elsewhere in the data (don't set this to
+``Non-Certified``).
 
--  \`is\_licensed': set to 1 if licensed from another company
--  ``is_service``: set to 1 if a service, not a product (e.g. Airlines)
--  ``is_prescription``: set to 1 if prescription-only
--  ``is_b2b``: set to 1 if primarly marketed to other businesses (e.g.
-   pesticide)
+**url**: optional link to web page/PDF document etc. where this claim was made.
+Some people like to see the supporting data!
 
-Using the Data
---------------
 
-This is an Open Source project, so *we* don't place any restrictions on
-the data. The factual data (``company``, and ``brand``, etc.) probably
-isn't really copyrightable anyway.
+company: facts about companies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-However, the *campaigns* are copyrighted by the non-profits who created
-them, so ideally, you should get their permission before using it for
-anything more than research, journalism, etc.
+**Primary Key**: ``company``
 
-See the
-`README <https://github.com/spendright-scrapers/campaigns/blob/master/README.md>`__
-for the campaigns scraper for the rules for using each campaign's data.
+**company**: canonical name for the company (e.g. ``Disney``)
 
-If all else fails, go with common sense. Most of these organizations are
-more interested in changing the world that exercising their intellectual
-property rights. Be polite:
+**company_full**: full, official name of the company (e.g.
+``The Walt Disney Company``).
 
--  Give the organization credit and link back to them.
--  Preserve the integrity of the original data; don't censor it or
-   interject your own opinions.
--  Don't use it to frustrate the organization's intent (e.g. using the
-   HRC Buyer's Guide to support companies that discriminate against LGBT
-   employees).
--  Don't pretend you have the organization's endorsement, or that they
-   have endorsed specific products (even if they've rated them highly).
--  Link to the organization's donation page. Quality data like this
-   takes a lot of time and money to create!
+**email**: contact/feedback email for the company (e.g.
+``consumer.relations@adidas.com``).
+
+**facebook_url**: optional link to official Facebook page for the company.
+
+**feedback_url**: optional link to a page where consumers can submit
+feedback to the company (some companies don't like to do this by email).
+
+**hq_company**: optional name of the country where this company is
+headquartered (e.g. ``USA``).
+
+**logo_url**: 0 or 1. Optional link to an image of this company's logo (need
+not be on the company's website).
+
+**phone**: optional phone number for customer feedback/complaints (a string,
+not a number)
+
+**twitter_handle**: optional handle for the company's Twitter account,
+including the ``@`` (e.g. ``@Stonyfield``).
+
+**url**: optional link to official web site/page for this company.
+
+
+company_name: canoncial, full, and alternate names for companies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Primary Key**: ``company``, ``company_name``
+
+**company**: canonical name for the company (e.g. ``Disney``)
+
+**company_name**: a name for the company. can be the canonical
+name, the full name (see ``company.company_full``) or something else
+(e.g. ``Walt Disney``).
+
+**is_alias**: 0 or 1. If 1, this is a name that somebody used somewhere
+but isn't really a recognizable name for the company (e.g. "AEO" for
+American Eagle Outfitters or "LGE" for "LG Electronics"). *Set this your
+input data to knock out weird company aliases.*
+
+**is_full**: 0 or 1. If 1, this is the full name for the company,
+which also appears in ``company.company_full``. (There isn't an
+``is_canonical`` field; just check if ``company = company_name``.)
+
+
+rating: campaigns' judgments of brands and companies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is where the magic happens.
+
+**brand**: canonical name for the brand. Empty string if this is a rating of
+a company.
+
+**campaign_id**: ID of campaign making this claim
+
+**company**: canonical name for the company
+
+**date**: optional date this rating was last updated, in ``YYYY-MM-DD``,
+``YYYY-MM``, or ``YYYY`` format. A string, not a number.
+
+**grade**: optional letter grade (e.g. `A+`, `C-`, `F`). You see `E` some
+places too.
+
+**judgment**: -1, 0, or 1. Should consumers support (`1`), consider
+(`0`), or avoid (`-1`) the company or brand? Some campaigns give everything
+a `1` (e.g. the B Corp List) or everything a `-1` (e.g. a boycott campaign).
+
+``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need to
+set it yourself. Red for avoid, yellow for consider, and green for support
+is a de-facto standard. If all else fails, contact the campaign's author
+and ask.*
+
+**max_score**: if ``score`` is set, the highest score possible on the rating
+scale (a number).
+
+**min_score**: if ``score`` is set, the lowest score possible on the rating
+scale (a number). *If you set* ``score`` *but not* ``min_score``*,* ``msd``
+*will assume* ``min_score`` *is zero*.
+
+**num_ranked**: if ``rank`` is set, the number of things ranked (an integer)
+
+**rank**: if campaign ranks companies/brands, where this one ranks
+(this is an integer, and the best ranking is `1`, not `0`).
+
+**scope**: optional free-form limitation on which products this applies to
+(e.g. ``Fair Trade``). Usually an empty string, to mean no limitation or that
+it's only *not* some scope elsewhere in the data (don't set this to
+``Non-Certified``).
+
+**score**: optional numerical score
+
+**url**: optional link to web page/PDF document etc. where this rating was
+made. Some people like to see the supporting data!
+
+
+scraper: when data was last gathered
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Primary Key**: ``scraper_id``
+
+**last_scraped**: when this data was last gathered, as a UTC ISO timestamp
+(for example, ``2015-08-03T20:55:36.795227Z``).
+
+**scraper_id**: unique identifier for the scraper that gathered this data
+
+
+scraper_brand_map: names of brands in the input data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is mostly useful for figuring out where weird output data came from.
+
+``msd`` *ignores this table if it appears in the input data*
+
+**Primary Key**: ``scraper_id``, ``scraper_company``, ``scraper_brand``
+
+**Other Indexes**: (``company``, ``brand``)
+
+**brand**: canonical name for the brand. (This should never be empty;
+that's what ``scraper_company_map`` is for.)
+
+**company**: canonical name for the company
+
+**scraper_brand**: name used for the brand in the input data
+
+**scraper_company**: name used for the company in the input data
+
+**scraper_id**: unique identifier for the scraper that used this
+brand and company name
+
+
+scraper_category_map: names of categories in the intput data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is mostly useful for figuring out where weird output data came from.
+
+``msd`` *ignores this table if it appears in the input data*
+
+**Primary Key**: ``scraper_id``, ``category``, ``scraper_brand``
+
+**Other Indexes**: (``category``)
+
+**category**: canonical name for a category (e.g. ``Food and Beverages``)
+
+**scraper_brand**: name used for the brand in the input data (e.g.
+`` food &  beverages``).
+
+**scraper_id**: unique identifier for the scraper that used this
+category name
+
+
+scraper_company_map: names of companies in the input data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is mostly useful for figuring out where weird output data came from.
+
+``msd`` *ignores this table if it appears in the input data*
+
+**Primary Key**: ``scraper_id``, ``scraper_company``
+
+**Other Indexes**: (``company``)
+
+**company**: canonical name for the company
+
+**scraper_brand**: name used for the brand in the input data
+
+**scraper_id**: unique identifier for the scraper that used this
+company name
+
+
+subcategory: product category relationships
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``msd`` doesn't attempt to build a proper category tree; it's really just
+a directed graph of category relationships: if something is in category
+A (``subcategory``) it must also be in category B (``category``).
+
+``msd`` *automatically infers implied relationships: if A is a subcategory
+of B and B is a subcategory of C, A is a subcategory of C.*
+
+**category**: canonical name for a category
+
+**is_implied**: 0 or 1. If 1, this relationship was inferred by ``msd``.
+*Ignored in the input data.*
+
+**subcategory**: canonical name for a subcategory of ``category``
+
+
+url: hook for scraping URLs in the scraper data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*This table only exists in the input data, and is only used to fill fields
+in the output data that would otherwise be empty.*
+
+This allows us to build generic scrapers that can grab Twitter handles,
+Facebook URLs, etc. directly from a company or brand's official page. See
+SpendRight's `scrape-urls <https://github.com/spendright/scrape-urls>`__
+for an example.
+
+**facebook_url**: optional facebook page for a company/brand
+
+**last_scraped**: when the company/brand's page was scraped, as a UTC
+iso timestamp (e.g. ``2015-08-03T20:55:36.795227Z``). *Not currently used.*
+
+**twitter_handle**: optional twitter handle for a company/brand, including
+the leading ``@``.
+
+**url**: url this data was scraped from
