@@ -107,7 +107,7 @@ to have extra fields;* ``msd`` *will just ignore them.*
 - *strips leading and trailing whitespace*
 - *converts "smart quotes", ligatures, and other silliness to the plain equivalent*
 - *normalizes all unicode into
-  `NFKD <http://www.unicode.org/reports/tr15/#Norm_Forms>`
+  `NFKD <http://www.unicode.org/reports/tr15/#Norm_Forms>`__
   (this basically means there aren't multiple ways to represent the same
   accented character).*
 
@@ -116,10 +116,49 @@ to have extra fields;* ``msd`` *will just ignore them.*
 the* ``tm`` *field, below), and ignores anything after it. For example,
 if you throw something like* ``INVOKANA™ (canagliflozin) USPI`` *into
 the* ``brand`` *field, it'll know that the brand is named* ``INVOKANA``
-*and is supposed to have a* ``™`` *after it.*
+*and is supposed to have a ™ after it.*
+
+``msd`` *will infer that companies and brands exist. For example, if you
+include a rating for a company in the* ``rating`` *table, a corresponsding
+entry will be automatically created for you in the* ``company`` *table.*
 
 Table Definitions
 -----------------
+
+brand: facts about brands
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Primary Key**: ``company``, ``brand``
+
+``brand``: canonical name for the brand (e.g. ``Dove``)
+
+``company``: canonical name for the company (e.g. ``Unilever``)
+
+``facebook_url``: Optional link to official Facebook page for the brand. (If
+there's only a page for the company, put that in ``company.facebook_url``).
+So consumers can say nice/brutally honest things on their Facebook page.
+
+``is_former``: 0 or 1. If 1, this brand no longer exists (e.g. Sanyo) or was
+sold to another company (e.g. LU is no longer owned by Groupe Danone)
+
+``is_licensed``: 0 or 1. If 1, this brand actually belongs to another company
+(e.g. The Coca Cola Company markets products under the Evian brand).
+
+``is_prescription``: 0 or 1. If 1, this brand is available by prescription
+only.
+
+``logo_url``: 0 or 1. Optional link to an image of this brand's logo (need not
+be to the brand's website).
+
+``tm``: empty string, ``™``, ``®`` or ``℠``. The thing that companies like to
+appear directly after the brand name.
+
+``twitter_handle``: handle on Twitter, including the ``@`` (e.g.
+``@Electrolux``. So consumers can congratulate them/call them out on
+Twitter.
+
+``url``: optional link to official web site/page for this brand. It's okay
+if this is just a sub-page of the company's official website.
 
 
 
