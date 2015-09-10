@@ -101,7 +101,7 @@ output data;* ``msd`` *will merge them for you.*
 fields set to* ``NULL`` *that are supposed to have a value. And it's fine
 to have extra fields;* ``msd`` *will just ignore them.*
 
-*For every text field,* ``msd` *does the following things for you:*
+*For every text field,* ``msd`` *does the following things for you:*
 
 - *converts all whitespace (tabs, double spaces, etc.) to a single space*
 - *strips leading and trailing whitespace*
@@ -130,35 +130,41 @@ brand: facts about brands
 
 **Primary Key**: ``company``, ``brand``
 
-``brand``: canonical name for the brand (e.g. ``Dove``)
+**brand**: canonical name for the brand (e.g. ``Dove``)
 
-``company``: canonical name for the company (e.g. ``Unilever``)
+**company**: canonical name for the company (e.g. ``Unilever``)
 
-``facebook_url``: Optional link to official Facebook page for the brand. (If
+**facebook_url**: Optional link to official Facebook page for the brand. (If
 there's only a page for the company, put that in ``company.facebook_url``).
 So consumers can say nice/brutally honest things on their Facebook page.
 
-``is_former``: 0 or 1. If 1, this brand no longer exists (e.g. Sanyo) or was
-sold to another company (e.g. LU is no longer owned by Groupe Danone)
+**is_former**: 0 or 1. If 1, this brand no longer exists (e.g. Sanyo) or was
+sold to another company (e.g. LU is no longer owned by Groupe Danone). Set
+this to 1 in your input data to knock out out-of-date brand information from
+out-of-date consumer campaigns.
 
-``is_licensed``: 0 or 1. If 1, this brand actually belongs to another company
+**is_licensed**: 0 or 1. If 1, this brand actually belongs to another company
 (e.g. The Coca Cola Company markets products under the Evian brand).
+Generally a good idea to put the responsiblity for a brand on its actual
+owner.
 
-``is_prescription``: 0 or 1. If 1, this brand is available by prescription
-only.
+**is_prescription**: 0 or 1. If 1, this brand is available by prescription
+only (so you probably can't buy it on, like, Amazon.com).
 
-``logo_url``: 0 or 1. Optional link to an image of this brand's logo (need not
+**logo_url**: 0 or 1. Optional link to an image of this brand's logo (need not
 be to the brand's website).
 
-``tm``: empty string, ``™``, ``®`` or ``℠``. The thing that companies like to
+**tm**: empty string, ``™``, ``®`` or ``℠``. The thing that companies like to
 appear directly after the brand name.
 
-``twitter_handle``: handle on Twitter, including the ``@`` (e.g.
+**twitter_handle**: handle on Twitter, including the ``@`` (e.g.
 ``@Electrolux``. So consumers can congratulate them/call them out on
 Twitter.
 
-``url``: optional link to official web site/page for this brand. It's okay
+**url**: optional link to official web site/page for this brand. It's okay
 if this is just a sub-page of the company's official website.
+
+
 
 
 
