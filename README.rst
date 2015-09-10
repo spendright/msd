@@ -530,3 +530,31 @@ iso timestamp (e.g. ``2015-08-03T20:55:36.795227Z``). *Not currently used.*
 the leading ``@``.
 
 **url**: url this data was scraped from
+
+
+Writing your own scrapers
+=========================
+
+If you want to write something in Python, check out SpendRight's
+`scrape-campaigns <https://github.com/spendright/scrape-campaigns>`__
+project, and submit a pull request (look in ``scrapers/``) for examples.
+
+If you'd rather write in another language, consider setting up your own
+scraper on `morph.io <https://morph.io/>`__, which can also handle scrapers
+in Ruby, PHP, Perl, and Node.js. See the
+`morph.io Documentation <https://morph.io/documentation>`__ for details.
+And let us know, so we can point
+`morph.io/spendright/msd <https://morph.io/spendright/msd>`__ at it.
+
+
+Working on msd
+==============
+
+``msd`` is pretty straightforward. Here's a brief overview of how it works:
+
+1. ``msd`` starts in ``msd/cmd.py`` (look for ``msd.cmd.run()``).
+2. It first dumps all the input data into a temporary "scratch" DB
+(``msd-scratch.sqlite``) with the correct columns and useful indexes (look
+for ``msd.scratch.build_scratch_db()``).
+3. Then it creates the output database (``msd.sqlite``) and fills it table by
+table (look for ``msd.fill_output_db()``).
