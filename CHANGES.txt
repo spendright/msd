@@ -1,0 +1,4 @@
+0.1.1, 2010-09-14 -- Install dependencies
+ * setup.py includes dependencies in install_requires
+
+0.1.0, 2010-09-14 -- Initial release
