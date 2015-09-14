@@ -39,4 +39,7 @@ def build_claim_table(output_db, scratch_db):
         claim_row['brand'] = brand
         claim_row['judgment'] = fix_judgment(claim_row['judgment'])
 
+        if claim_row['judgment'] is None:
+            continue
+
         output_row(output_db, 'claim', claim_row)
