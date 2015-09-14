@@ -392,6 +392,9 @@ a company.
 **date**: optional date this rating was last updated, in ``YYYY-MM-DD``,
 ``YYYY-MM``, or ``YYYY`` format. A string, not a number.
 
+**description**: free-form, brief description of the rating (e.g.
+``Soaring``, ``Cannot Recommend``).
+
 **grade**: optional letter grade (e.g. ``A+``, ``C-``, ``F``). Some campaigns
 use ``E`` instead of ``F``.
 
