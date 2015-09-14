@@ -34,8 +34,15 @@ def select_all(db, table_name):
         key=lambda row: [(k, repr(v)) for (k, v) in row.items()])
 
 
+def strip_null(row):
+    """Remove keys from *row* whose values are ``None``."""
+    return dict((k, v) for k, v in row.items() if v is not None)
+
+
 def insert_rows(db, table_name, rows):
-    """Call insert_row() multiple times."""
+    """Call insert_row() multiple times. Would want to use multi-row
+    insert syntax before putting this in msd.db (but we don't actually
+    need it)."""
     for row in rows:
         insert_row(db, table_name, row)
 
