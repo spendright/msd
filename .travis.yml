@@ -5,4 +5,5 @@ python:
   - "3.5"
 matrix:
   fast_finish: true
+script: python setup.py test
 sudo: false
