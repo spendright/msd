@@ -35,6 +35,12 @@ them for permission now, or forgiveness later.
 companies and brands are almost certainly fair game.)
 
 
+Installation
+============
+
+It's on PyPI: ``pip install msd``
+
+
 Usage
 =====
 
@@ -43,7 +49,7 @@ Usage
 This produces a file named ``msd.sqlite`` (you can change this with the ``-o``
 switch).
 
-If you don't have the library installed (or are doing development), you
+If you don't have the library installed (e.g. for development), you
 can use ``python -m msd.cmd`` in place of ``msd``.
 
 
