@@ -148,11 +148,11 @@ category name cleaning
 ``food & beverages`` *in the input data would become* ``Food and Beverages``
 *in the output data.*
 
-.. rating cleanup
-   ^^^^^^^^^^^^^^
+rating cleanup
+^^^^^^^^^^^^^^
 
-   ``msd`` can do limited cleanup of ratings, including inferring ``judgment``
-   from ``grade``. See ``rating`` table for details.
+``msd`` can do limited cleanup of ratings, including inferring ``judgment``
+from ``grade``. See ``rating`` table for details.
 
 inferred rows
 ^^^^^^^^^^^^^
@@ -400,12 +400,12 @@ use ``E`` instead of ``F``.
 everything a ``1`` (e.g. certifiers) or everything a ``-1`` (e.g. boycott
 campaigns).
 
-.. ``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need
-    to set it yourself.
+``msd`` *can infer* ``judgment`` *from* ``grade``, *but otherwise you need
+to set it yourself in the input data.*
 
-*You must set* ``judgment`` *in your input data. Red for avoid, yellow for
-consider, and green for support is a de-facto standard. If all else fails,
-contact the campaign's author and ask.*
+*Red for avoid, yellow for consider, and green for support is a de-facto
+standard among consumer campaigns. If all else fails, contact the campaign's
+author and ask.*
 
 **max_score**: if ``score`` is set, the highest score possible on the rating
 scale (a number).

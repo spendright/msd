@@ -38,9 +38,19 @@ def build_rating_table(output_db, scratch_db):
             continue
 
         rating_row = merge_dicts(rating_rows)
+
         rating_row['company'] = company
         rating_row['brand'] = brand
+        if rating_row['grade']:
+            rating_row['grade'] = str(rating_row['grade']).upper()
+
         rating_row['judgment'] = fix_judgment(rating_row['judgment'])
+
+        if rating_row['judgment'] is None and rating_row['grade']:
+            rating_row['judgment'] = grade_to_judgment(rating_row['grade'])
+
+        if rating_row['judgment'] is None:
+            continue
 
         # fill min_score
         if (rating_row.get('score') is not None and
@@ -64,3 +74,16 @@ def fix_judgment(judgment):
         return -1
     else:
         return 0
+
+
+def grade_to_judgment(grade):
+    letter = grade[:1]
+
+    if letter in 'AB':
+        return 1
+    elif letter == 'C':
+        return 0
+    elif letter in 'DEF':
+        return -1
+    else:
+        return None
