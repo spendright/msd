@@ -18,7 +18,10 @@ try:
     setup  # quiet "redefinition of unused ..." warning from pyflakes
     # arguments that distutils doesn't understand
     setuptools_kwargs = {
-        'install_requires': [],
+        'install_requires': [
+            'Unidecode>=0.04.9',
+            'titlecase>=0.7.1',
+        ],
         'provides': ['msd'],
         'test_suite': 'test.unit.suite.load_tests',
     }
