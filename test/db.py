@@ -28,10 +28,19 @@ from msd.table import TABLES
 
 def select_all(db, table_name):
     """Get all rows from a table, and sort (for easy testing of equality)."""
+    return sorted_rows(
+        dict(row) for row in
+        db.execute('SELECT * FROM `{}`'.format(table_name)))
+
+
+def sorted_rows(rows):
+    """Sort rows by the value of each key, in alphabetical order
+    (for easy testing of equality)."""
+    # avoid comparing values of different types; Python 3 dislikes this
     return sorted(
-        (dict(row) for row in
-         db.execute('SELECT * FROM `{}`'.format(table_name))),
-        key=lambda row: [(k, repr(v)) for (k, v) in row.items()])
+        rows,
+        key=lambda row: sorted((k, (type(v).__name__, v))
+                               for (k, v) in row.items()))
 
 
 def strip_null(row):

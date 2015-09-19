@@ -84,14 +84,15 @@ def select_groups(db, table_name, key_cols, cols=None):
     from_cols_sql = col_sql(cols) if cols else '*'
     key_sql = col_sql(key_cols)
 
-    select_sql = 'SELECT {} FROM `{}` GROUP BY {} ORDER BY {}'.format(
-        from_cols_sql, table_name, key_sql, key_sql)
+    select_sql = 'SELECT {} FROM `{}` ORDER BY {}'.format(
+        from_cols_sql, table_name, key_sql)
 
     for key, rows in groupby(
             db.execute(select_sql),
             key=lambda r: tuple(r[kc] for kc in key_cols)):
 
         yield key, [dict(row) for row in rows]
+
 
 def show_tables(db):
     """List the tables in the given db."""
