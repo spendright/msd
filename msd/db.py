@@ -93,6 +93,7 @@ def select_groups(db, table_name, key_cols, cols=None):
 
         yield key, [dict(row) for row in rows]
 
+
 def show_tables(db):
     """List the tables in the given db."""
     sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
