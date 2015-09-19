@@ -36,9 +36,11 @@ def select_all(db, table_name):
 def sorted_rows(rows):
     """Sort rows by the value of each key, in alphabetical order
     (for easy testing of equality)."""
+    # avoid comparing values of different types; Python 3 dislikes this
     return sorted(
         rows,
-        key=lambda row: sorted((k, repr(v)) for (k, v) in row.items()))
+        key=lambda row: sorted((k, (type(v).__name__, v))
+                               for (k, v) in row.items()))
 
 
 def strip_null(row):
