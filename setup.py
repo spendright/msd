@@ -45,7 +45,7 @@ setup(
     ],
     description='Merge SpendRight scraper data',
     license='Apache',
-    long_description=open('README.rst').read(),
+    long_description=open('README.rst', encoding='utf_8').read(),
     name='msd',
     packages=[
         'msd',
