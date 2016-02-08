@@ -13,7 +13,12 @@
 #   limitations under the License.
 from unittest import TestCase
 
+from msd.company import build_company_name_and_scraper_company_map_tables
 from msd.company import get_company_names
+
+from ...db import DBTestCase
+from ...db import insert_rows
+from ...db import select_all
 
 
 class TestGetCompanyNames(TestCase):
@@ -26,3 +31,29 @@ class TestGetCompanyNames(TestCase):
 
     def test_basic(self):
         self.assertEqual(get_company_names('Konica'), {'Konica'})
+
+
+class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
+
+    # need everything with a "company" column in it
+    SCRATCH_TABLES = {
+        'brand', 'category', 'claim', 'company', 'company_name',
+        'rating', 'scraper_brand_map', 'scraper_company_map'}
+
+    def test_dont_merge_l_international_and_l_brands(self):
+        # this tests #33
+        insert_rows(self.scratch_db, 'company', [
+            dict(company='L. International',
+                 scraper_id='sr.campaign.b_corp'),
+            dict(company='L Brands',
+                 scraper_id='sr.campaign.hrc'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        rows = select_all(self.output_db, 'scraper_company_map')
+        companies = {row['company'] for row in rows}
+
+        self.assertEqual(len(rows), 2)
+        self.assertIn('L.', companies)
