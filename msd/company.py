@@ -201,9 +201,6 @@ def pick_company_full(names):
                       -len(n.encode('utf8'))))[0]
 
 
-
-
-
 def get_company_keys(s):
     variants = set()
 
@@ -227,8 +224,9 @@ def get_company_keys(s):
     return {v for v in variants if len(v) > 1}
 
 
-
-@lru_cache()
+# For some reason, the cache would return {'L', 'L Brands'} for 'L Brands'.
+# No clue where it was getting this from. A bug in lru_cache()?
+#@lru_cache()
 def get_company_names(company):
     """Get a set of possible ways to display company name."""
     return {v for v in _yield_company_names(company) if len(v) > 1}
@@ -288,7 +286,7 @@ def get_company_aliases(company):
             aliases.update((part.strip() for part in a.split('/')))
 
     # remove short/empty matches
-    return set(a for a in aliases if len(a) > 1)
+    return {a for a in aliases if len(a) > 1}
 
 
 def map_company(output_db, scraper_id, scraper_company):
