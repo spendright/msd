@@ -46,7 +46,8 @@ def clean_string(s):
     if not isinstance(s, str):
         raise TypeError
 
-    s = unicodedata.normalize('NFKD', s)
+    # see issue #32 for why we use NFC
+    s = unicodedata.normalize('NFC', s)
     s = s.translate(BAD_CODEPOINTS)
     s = simplify_whitespace(s)
 
