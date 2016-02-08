@@ -221,14 +221,17 @@ def get_company_keys(s):
     variants.add(norm_s.replace('.', '. '))
     variants.add(norm_s.replace("'", ''))
 
-    return set(simplify_whitespace(v) for v in variants)
+    variants = {simplify_whitespace(v) for v in variants}
+
+    # disallow a single character as a key (see #33)
+    return {v for v in variants if len(v) > 1}
+
 
 
 @lru_cache()
 def get_company_names(company):
     """Get a set of possible ways to display company name."""
-    return set(v for v in _yield_company_names(company)
-               if len(v) > 1)
+    return {v for v in _yield_company_names(company) if len(v) > 1}
 
 
 def _yield_company_names(company):
