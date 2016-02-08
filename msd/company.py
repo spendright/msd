@@ -224,9 +224,7 @@ def get_company_keys(s):
     return {v for v in variants if len(v) > 1}
 
 
-# For some reason, the cache would return {'L', 'L Brands'} for 'L Brands'.
-# No clue where it was getting this from. A bug in lru_cache()?
-#@lru_cache()
+@lru_cache()
 def get_company_names(company):
     """Get a set of possible ways to display company name."""
     return {v for v in _yield_company_names(company) if len(v) > 1}
@@ -269,7 +267,10 @@ def _yield_company_names(company):
 def get_company_aliases(company):
     """Get a set of all ways to match against this company. Some of
     these may be too abbreviated to use as the company's display name."""
-    aliases = get_company_names(company)
+    aliases = set()
+
+    # result of get_company_names() is cached, so don't modify it!
+    aliases.update(get_company_names(company))
 
     # Match "The X Company", "X Company", "Groupe X"
     for regex in COMPANY_ALIAS_REGEXES:
