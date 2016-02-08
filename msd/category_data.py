@@ -36,7 +36,9 @@ CATEGORY_ALIASES = {
     'Fun and Games': 'Toys and Games',
     'Misc. Food': 'Food',
     'Occ. Safety and Health Consulting': (
-        'Occupational Safety and Health Consulting')
+        'Occupational Safety and Health Consulting'),
+    'Pet': 'Pets',
+    'Restaurant': 'Restaurants',
 }
 
 # Categories that we can't just split on "and"; e.g.
