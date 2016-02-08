@@ -42,6 +42,10 @@ class TestGetCompanyNames(TestCase):
     def test_basic(self):
         self.assertEqual(get_company_names('Konica'), {'Konica'})
 
+    def test_lowercase_a_s(self):
+        # this tests #30
+        self.assertEqual(get_company_names('bisgaard sko a/s'),
+                         {'bisgaard sko a/s', 'bisgaard sko'})
 
 
 class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):

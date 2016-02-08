@@ -209,6 +209,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|S\.p\.A\.'
     r'|Sarl'
     r'|SpA'
+    r'|a/s'
     r'|asa'
     r'|b\.v\.'
     r'|gmbh'
