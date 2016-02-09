@@ -1,7 +1,14 @@
-0.1.2, 2010-09-18 -- select_groups()
+0.1.3, 2016-02-08 -- merge bugfixes
+ * eliminated single-character company names/keys (#33)
+ * use canonical company/brand when building category table (#34)
+ * output now uses NFC unicode normalization, not NFKD (#32)
+ * fix "a/s" (#30) and "Pvt Ltd" (#12) company suffixes
+ * custom corrections: make "Pet" and "Restaurant" categories plural (#9)
+
+0.1.2, 2015-09-18 -- select_groups()
  * fix severe bug in select_groups() that silently dropped data (#27)
 
-0.1.1, 2010-09-14 -- Install dependencies
+0.1.1, 2015-09-14 -- Install dependencies
  * setup.py includes dependencies in install_requires
 
-0.1.0, 2010-09-14 -- Initial release
+0.1.0, 2015-09-14 -- Initial release
