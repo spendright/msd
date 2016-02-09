@@ -14,7 +14,12 @@
 from unittest import TestCase
 
 from msd.category import _imply_category_ancestors
+from msd.category import build_category_table
 from msd.category import split_category
+
+from ...db import DBTestCase
+from ...db import insert_rows
+from ...db import select_all
 
 
 class TestImplyCategoryAncestors(TestCase):
@@ -67,3 +72,56 @@ class TestSplitCategory(TestCase):
     def test_oxford_comma(self):
         self.assertEqual(split_category('Foo, Bar, and Baz'),
                          {'Foo', 'Bar', 'Baz'})
+
+
+class TestBuildCategoryTable(DBTestCase):
+
+    SCRATCH_TABLES = {'category'}
+
+    OUTPUT_TABLES = {'scraper_brand_map', 'scraper_category_map',
+                     'scraper_company_map', 'subcategory'}
+
+    def test_empty(self):
+        build_category_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(select_all(self.output_db, 'category'), [])
+
+    def test_company_map(self):
+        # this tests #34
+        insert_rows(self.scratch_db, 'category', [
+            dict(
+                brand='',
+                category='Footwear',
+                company='Indosole, LLC',
+                scraper_id='sr.campaign.b_corp',
+            ),
+        ])
+
+        insert_rows(self.output_db, 'scraper_category_map', [
+            dict(
+                category='Footwear',
+                scraper_category='Footwear',
+                scraper_id='sr.campaign.b_corp',
+            ),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(
+                company='Indosole',
+                scraper_company='Indosole, LLC',
+                scraper_id='sr.campaign.b_corp',
+            ),
+        ])
+
+        build_category_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'category'),
+            [
+                dict(
+                    brand='',
+                    category='Footwear',
+                    company='Indosole',
+                    is_implied=0,
+                ),
+            ])

@@ -40,11 +40,6 @@ def build_category_table(output_db, scratch_db):
     for (company, brand), _, category_rows in select_groups_by_target(
             output_db, scratch_db, 'category'):
 
-        # don't group by category. instead, get all categories for target,
-        # and find implied categories
-        company = category_rows[0]['company']
-        brand = category_rows[0]['brand']
-
         # map categories from rows
         categories = set()
         for category_row in category_rows:
