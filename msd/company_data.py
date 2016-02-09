@@ -187,12 +187,13 @@ COMPANY_TYPE_RE = re.compile(
     r'|LP'
     r'|Limited'
     r'|Llp'
+    r'|Pvt\.? Ltd\.?'
     r'|Ltd\.?'
     r'|Ltda\.?'
     r'|nv'
     r'|NV'
     r'|N\.V\.'
-    r'|PBC'  # "Public Benefit Corporation"? Only on B Corp site
+    r'|PBC'  # "Public Benefit Corporation" (Delaware benefit corp.)
     r'|PLC'
     r'|P\.C\.'
     r'|Pty\.? Ltd\.?'

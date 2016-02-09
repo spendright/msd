@@ -47,6 +47,11 @@ class TestGetCompanyNames(TestCase):
         self.assertEqual(get_company_names('bisgaard sko a/s'),
                          {'bisgaard sko a/s', 'bisgaard sko'})
 
+    def test_pvt_ltd(self):
+        # this tests #12
+        self.assertEqual(get_company_names('Servals Pvt Ltd'),
+                         {'Servals', 'Servals Pvt Ltd'})
+
 
 class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
 
