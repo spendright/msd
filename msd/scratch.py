@@ -217,7 +217,8 @@ def clean_input_row(row, table_name):
     """Clean each value in the given row of input data, and remove
     extra columns."""
     table_def = TABLES.get(table_name, {})
-    valid_cols = set(table_def.get('columns', ())) | {'scraper_id'}
+    column_types = table_def.get('columns', {})
+    valid_cols = set(column_types) | {'scraper_id'}
 
     cleaned = {}
 
@@ -229,5 +230,12 @@ def clean_input_row(row, table_name):
             value = clean_string(value)
 
         cleaned[col_name] = value
+
+    # make sure primary key columns aren't null or unset
+    for key_col_name in table_def.get('primary_key', ()):
+        if cleaned.get(key_col_name) is None:
+            if column_types.get(key_col_name) == 'text':
+                cleaned[key_col_name] = ''
+            # currently all our primary key columns are text
 
     return cleaned
