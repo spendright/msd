@@ -14,6 +14,7 @@
 # limitations under the License.
 from unittest import TestCase
 
+from msd.scratch import clean_input_row
 from msd.scratch import parse_input_path
 
 
@@ -36,3 +37,19 @@ class TestParseInputPath(TestCase):
     def test_uppercase_format(self):
         self.assertEqual(parse_input_path('DATA.YAML'),
                          ('DATA', 'yaml'))
+
+
+# partial test, for newly added feature
+class TestCleanInputRow(TestCase):
+
+    def test_empty(self):
+        self.assertEqual(clean_input_row({}, 'foo'), {})
+
+    def test_add_primary_key_columns(self):
+        self.assertEqual(
+            clean_input_row({}, 'claim'),
+            dict(campaign_id='',
+                 company='',
+                 brand='',
+                 scope='',
+                 claim=''))
