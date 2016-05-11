@@ -49,6 +49,21 @@ Usage
 This produces a file named ``msd.sqlite`` (you can change this with the ``-o``
 switch).
 
+``msd`` can also take YAML files as input. The YAML files should encode a
+map from table name to list of rows (which are maps from column name to value).
+For example::
+
+  campaign:
+  - author: Greenpeace International
+    campaign_id: greenpeace_palm_oil
+  rating:
+  - campaign_id: greenpeace_palm_oil
+    company: Colgate-Palmolive
+    judgment: -1
+  - campaign_id: greenpeace_palm_oil
+    company: Danone
+    judgment: 0
+
 If you don't have the library installed (e.g. for development), you
 can use ``python -m msd.cmd`` in place of ``msd``.
 
