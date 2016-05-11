@@ -1,3 +1,7 @@
+0.1.4, 2016-05-11 -- YAML!
+ * reads in YAML format as well as sqlite (#36)
+ * fixes rows with null or missing primary key values (#37)
+
 0.1.3, 2016-02-08 -- merge bugfixes
  * eliminated single-character company names/keys (#33)
  * use canonical company/brand when building category table (#34)
