@@ -1,4 +1,4 @@
-# Copyright 2014-2015 SpendRight, Inc.
+# Copyright 2014-2016 SpendRight, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Building the scratch (intermediate) database."""
+import re
+import yaml
 from logging import getLogger
 from os import remove
 from os import rename
@@ -27,6 +29,10 @@ from .norm import clean_string
 from .table import TABLES
 
 log = getLogger(__name__)
+
+
+_INPUT_PATH_RE = re.compile(
+    r'^(?P<scraper_prefix>.*)\.(?P<extension>(sqlite|yaml))$', re.I)
 
 
 def build_scratch_db(
@@ -70,10 +76,16 @@ def build_scratch_db(
             log.info('dumping data from {} -> {}'.format(
                 input_db_path, scratch_db_tmp_path))
 
-            scraper_prefix = db_path_to_scraper_prefix(input_db_path)
-            with open_db(input_db_path) as input_db:
+            scraper_prefix, file_type = parse_input_path(input_db_path)
 
-                dump_db_to_scratch(input_db, scratch_db, scraper_prefix)
+            if file_type == 'sqlite':
+                with open_db(input_db_path) as input_db:
+                    dump_db_to_scratch(input_db, scratch_db, scraper_prefix)
+            else:
+                assert file_type == 'yaml'
+                with open(input_db_path) as input_yaml:
+                    dump_yaml_to_scratch(
+                        input_yaml, scratch_db, scraper_prefix)
 
     log.info('moving {} -> {}'.format(scratch_db_tmp_path, scratch_db_path))
     rename(scratch_db_tmp_path, scratch_db_path)
@@ -104,34 +116,57 @@ def create_scratch_table(scratch_db, table_name):
         create_index(scratch_db, table_name, index_cols)
 
 
-def db_path_to_scraper_prefix(path):
-    idx = path.lower().rfind('.sqlite')
-    if idx == -1:
-        raise ValueError
-    return path[:idx]
+def parse_input_path(path):
+    """Parse an input path into (scraper_prefix, file_type), or raise
+    ValueError.
+
+    file_type will be one of 'sqlite' or 'yaml'
+    """
+    m = _INPUT_PATH_RE.match(path)
+    if not m:
+        raise ValueError('Unknown input file type: {}'.format(path))
+    return m.group('scraper_prefix'), m.group('extension').lower()
 
 
 def dump_db_to_scratch(input_db, scratch_db, scraper_prefix=''):
     input_table_names = set(show_tables(input_db))
 
-    extra_table_names = input_table_names - set(TABLES)
-    if extra_table_names:
-        log.info('  ignoring extra tables: {}'.format(
-            ', '.join(extra_table_names)))
+    for table_name in sorted(input_table_names):
+        if table_name in TABLES:
+            select_sql = 'SELECT * from `{}`'.format(table_name)
+            rows = input_db.execute(select_sql)
+        else:
+            # don't even bother reading tables that dump_db_to_scratch()
+            # will ignore
+            rows = ()
 
-    for table_name in sorted(TABLES):
-        if table_name in input_table_names:
-            dump_table_to_scratch(
-                input_db, table_name, scratch_db, scraper_prefix)
+        dump_table_to_scratch(table_name, rows, scratch_db, scraper_prefix)
 
 
-def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
+def dump_yaml_to_scratch(input_yaml, scratch_db, scraper_prefix):
+    data = yaml.load(input_yaml)
+
+    if not isinstance(data, dict):
+        raise TypeError('Expected YAML to be dictionary')
+
+    for table_name, rows in sorted(data.items()):
+        if not isinstance(rows, list):
+            raise TypeError(
+                'Expected rows for table {} to be list'.format(table_name))
+
+        dump_table_to_scratch(table_name, rows, scratch_db, scraper_prefix)
+
+
+def dump_table_to_scratch(table_name, rows, scratch_db, scraper_prefix):
+    if table_name not in TABLES:
+        log.info('  ignoring extra table: {}'.format(table_name))
+        return
+
     log.info('  dumping table: {}'.format(table_name))
 
     table_def = TABLES[table_name]
 
-    select_sql = 'SELECT * from `{}`'.format(table_name)
-    for i, row in enumerate(input_db.execute(select_sql)):
+    for i, row in enumerate(rows):
         row = dict(row)
 
         # deal with extra columns
@@ -153,6 +188,7 @@ def dump_table_to_scratch(input_db, table_name, scratch_db, scraper_prefix):
 
         # insert!
         insert_row(scratch_db, table_name, row)
+
 
 
 def scratch_tables_with_cols(cols):

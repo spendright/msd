@@ -57,7 +57,7 @@ def parse_args(args=None):
     parser = ArgumentParser()
     parser.add_argument(
         dest='input_dbs', nargs='+',
-        help='SQLite databases to merge')
+        help='SQLite databases and/or YAML database dumps to merge')
     parser.add_argument(
         '-v', '--verbose', dest='verbose', default=False, action='store_true',
         help='Enable debug logging')
