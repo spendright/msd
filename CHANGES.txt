@@ -1,3 +1,6 @@
+0.1.5, 2016-05-18 -- YAML encoding
+ * leave it to PyYAML to determine file encoding (#39)
+
 0.1.4, 2016-05-11 -- YAML!
  * reads in YAML format as well as sqlite (#36)
  * fixes rows with null or missing primary key values (#37)
