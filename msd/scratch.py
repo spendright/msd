@@ -83,7 +83,7 @@ def build_scratch_db(
                     dump_db_to_scratch(input_db, scratch_db, scraper_prefix)
             else:
                 assert file_type == 'yaml'
-                with open(input_db_path) as input_yaml:
+                with open(input_db_path, mode='rb') as input_yaml:
                     dump_yaml_to_scratch(
                         input_yaml, scratch_db, scraper_prefix)
 
