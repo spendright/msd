@@ -172,7 +172,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|B\.V\.'
     r'|B.V. Nederland'
     r'|C\.V\.'
-    r'|Corp.'
+    r'|Corp\.?'
     r'|GmbH \& C[oO]\. [oO]HG'
     r'|GmbH \& Co\. ?KG\.?'  # handle typo: Lukas Meindl GmbH & Co.KG
     r'|GmbH \& Co\. KGaA'
@@ -221,6 +221,7 @@ COMPANY_TYPE_RE = re.compile(
 
 COMPANY_TYPE_CORRECTIONS = {
     'BV': 'B.V.',
+    'Corp': 'Corp.',
     'Incorporated': 'Inc',
     'Llc': 'LLC',
     'Llp': 'LLP',

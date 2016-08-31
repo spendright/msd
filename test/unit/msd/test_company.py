@@ -78,6 +78,30 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
         self.assertEqual(len(rows), 2)
         self.assertIn('L.', companies)
 
+    def test_merge_pvh_and_pvh_corp(self):
+        # regression test for separate PVH, PVH Corp.
+        insert_rows(self.scratch_db, 'company', [
+            dict(company='PVH',
+                 scraper_id='campaign.hrc'),
+            dict(company='PVH Corp',
+                 scraper_id='campaign.btb_fashion'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+        self.output_db, self.scratch_db)
+
+        # verify that companies merged
+        map_rows = select_all(self.output_db, 'scraper_company_map')
+        self.assertEqual(len(map_rows), 2)
+        self.assertEqual(set(row['company'] for row in map_rows), {'PVH'})
+
+        name_rows = select_all(self.output_db, 'scraper_company_map')
+        self.assertEqual(len(map_rows), 2)
+        for row in name_rows:
+            if row.get('is_full'):
+                # add trailing period
+                self.assertEqual(row['company_name'], 'PVH Corp.')
+
     def test_no_single_letter_company_names(self):
 
         insert_rows(self.scratch_db, 'company', [
