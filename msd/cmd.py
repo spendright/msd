@@ -34,17 +34,15 @@ def main(args=None):
     set_up_logging(verbose=opts.verbose, quiet=opts.quiet)
 
     run(input_db_paths=opts.input_dbs, scratch_db_path=opts.scratch_db,
-        output_db_path=opts.output_db, force_rebuild_scratch=opts.force)
+        output_db_path=opts.output_db)
 
 
 def run(*,
-        force_rebuild_scratch=False,
         input_db_paths=(),
         output_db_path=DEFAULT_OUTPUT_DB,
         scratch_db_path=DEFAULT_SCRATCH_DB):
 
-    build_scratch_db(scratch_db_path, input_db_paths,
-                     force=force_rebuild_scratch)
+    build_scratch_db(scratch_db_path, input_db_paths)
 
     build_output_db(scratch_db_path, output_db_path)
 
@@ -71,7 +69,7 @@ def parse_args(args=None):
         help='Turn off info logging')
     parser.add_argument(
         '-f', '--force', dest='force', default=False, action='store_true',
-        help='Force rebuild of scratch DB, even if newer than input')
+        help='Does nothing (scratch DB is always rebuilt)')
     parser.add_argument(
         '-i', '--scratch', dest='scratch_db',
         default=DEFAULT_SCRATCH_DB,
