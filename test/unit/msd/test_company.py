@@ -167,3 +167,23 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
         companies = {row['company'] for row in rows}
 
         self.assertEqual(companies, {'L Brands'})
+
+    def test_news_corporation(self):
+        # mark company name as invariant
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company_name='News Corporation',
+                 scraper_id='corrections.company_name'),
+        ])
+
+        insert_rows(self.scratch_db, 'company', [
+            dict(company='News Corporation',
+                 scraper_id='campaign.climate_counts'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        rows = select_all(self.output_db, 'scraper_company_map')
+        companies = {row['company'] for row in rows}
+
+        self.assertEqual(companies, {'News Corporation'})
