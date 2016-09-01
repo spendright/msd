@@ -14,6 +14,7 @@
 import logging
 from argparse import ArgumentParser
 
+import msd
 from msd.output import build_output_db
 from msd.scratch import build_scratch_db
 
@@ -25,6 +26,10 @@ log = logging.getLogger('msd.cmd')
 
 def main(args=None):
     opts = parse_args()
+
+    if opts.version:
+        print(msd.__version__)
+        return
 
     set_up_logging(verbose=opts.verbose, quiet=opts.quiet)
 
@@ -56,7 +61,7 @@ def set_up_logging(*, verbose=False, quiet=False):
 def parse_args(args=None):
     parser = ArgumentParser()
     parser.add_argument(
-        dest='input_dbs', nargs='+',
+        dest='input_dbs', nargs='*',
         help='SQLite databases and/or YAML database dumps to merge')
     parser.add_argument(
         '-v', '--verbose', dest='verbose', default=False, action='store_true',
@@ -74,6 +79,9 @@ def parse_args(args=None):
     parser.add_argument(
         '-o', '--output', dest='output_db', default=DEFAULT_OUTPUT_DB,
         help='Path to output DB (default: %(default)s)')
+    parser.add_argument(
+        '-V', '--version', dest='version', default=False,
+        action='store_true', help='Print version and exit')
 
     return parser.parse_args(args)
 
