@@ -16,6 +16,7 @@ from unittest import TestCase
 from msd.company import build_company_name_and_scraper_company_map_tables
 from msd.company import get_company_aliases
 from msd.company import get_company_names
+from msd.company import pick_company_name
 
 from ...db import DBTestCase
 from ...db import insert_rows
@@ -34,7 +35,7 @@ class TestGetCompanyNames(TestCase):
         self.assertEqual(get_company_names('L Brands'), {'L Brands'})
 
     def test_weird_caching_bug(self):
-        # for some reason, would get {'L', 'L Brands'} after calling
+        # would get {'L', 'L Brands'} after calling
         # get_company_aliases()
         get_company_aliases('L Brands')
         self.assertEqual(get_company_names('L Brands'), {'L Brands'})
@@ -51,6 +52,32 @@ class TestGetCompanyNames(TestCase):
         # this tests #12
         self.assertEqual(get_company_names('Servals Pvt Ltd'),
                          {'Servals', 'Servals Pvt Ltd'})
+
+
+
+class TestPickCompanyName(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_company_name, [])
+
+    def test_one(self):
+        self.assertEqual(pick_company_name(['Singularity']), 'Singularity')
+
+    def test_shortest(self):
+        self.assertEqual(
+            pick_company_name(['The Coca-Cola Company', 'Coca-Cola']),
+            'Coca-Cola')
+
+    def test_all_caps(self):
+        self.assertEqual(
+            pick_company_name(['ASUS', 'Asus']),
+            'ASUS')
+
+    def test_all_lowercase(self):
+        self.assertEqual(
+            pick_company_name(['Illy', 'illy']),
+            'Illy')
+
 
 
 class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
