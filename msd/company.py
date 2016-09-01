@@ -12,20 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+from collections import defaultdict
 from functools import lru_cache
 from logging import getLogger
 
 from .brand import select_brands
-from .company_data import BAD_COMPANY_ALIASES
-from .company_data import BAD_COMPANY_NAMES
-from .company_data import COMPANY_ALIASES
 from .company_data import COMPANY_ALIAS_REGEXES
-from .company_data import COMPANY_CORRECTIONS
-from .company_data import COMPANY_NAMES
 from .company_data import COMPANY_NAME_REGEXES
 from .company_data import COMPANY_TYPE_CORRECTIONS
 from .company_data import COMPANY_TYPE_RE
-from .company_data import UNSTRIPPABLE_COMPANIES
 from .company_data import UNSTRIPPABLE_COMPANY_TYPES
 from .db import select_groups
 from .merge import create_output_table
@@ -92,53 +87,43 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
     # company dicts ("cds") containing the following sets:
     #
     # names: possible company names
-    # aliases: name variants usable for matching (may include *names*)
+    # aliases: name variants usable for matching (should include *names*)
     # scraper_companies: tuples of (scraper_id, scraper_company)
-
     cds = []
 
-    # populate with hard-coded company names
-    for aliases in COMPANY_ALIASES:
-        cds.append(dict(aliases=aliases, names=set(), scraper_companies=set()))
+    cn_cds, invariant_names, sc_to_bad, cn_sc_to_full = (
+        load_company_name_corrections(scratch_db))
 
-    # populate with hard-coded company names
-    for names in COMPANY_NAMES:
-        cds.append(dict(aliases=names, names=names, scraper_companies=set()))
+    cds.extend(cn_cds)
 
-    # populate with 'company' and 'company_full' fields
-    scraper_companies = (
-        get_distinct_values(scratch_db, ['scraper_id', 'company']) |
-        get_distinct_values(scratch_db, ['scraper_id', 'company_full']))
+    # populate with any value of 'company' field
+    for scraper_id, company in (
+            get_distinct_values(scratch_db, ['scraper_id', 'company'])):
 
-    for (scraper_id, scraper_company) in scraper_companies:
-        if not (scraper_id and scraper_company):
-            continue
+        cds.append(_make_cd(
+            scraper_id, company, company, invariant_names))
 
-        cds.append(dict(
-            aliases=get_company_aliases(scraper_company),
-            names=get_company_names(scraper_company),
-            scraper_companies={(scraper_id, scraper_company)}))
+    # populate with values of 'company_full' field. these take lower
+    # priority than company_name rows tagged with is_full
 
-    # populate from company_name table
-    select_sql = 'SELECT company, company_name, is_alias FROM company_name'
-    for scraper_company, scraper_company_name, is_alias in (
-            scratch_db.execute(select_sql)):
-        if not (scraper_company and scraper_company_name):
-            continue
+    cf_sc_to_full = defaultdict(set)
 
-        aliases = (get_company_aliases(scraper_company) |
-                   get_company_aliases(scraper_company_name))
-        names = set()
-        if not is_alias:
-            # already did this for scraper_company, above
-            names = get_company_names(scraper_company_name)
+    for scraper_id, company, company_full in (
+            get_distinct_values(
+                scratch_db, ['scraper_id', 'company', 'company_full'])):
 
-        cds.append(dict(aliases=aliases, names=names, scraper_companies=set()))
+        if not company_full:
+            continue  # don't pollute cf_sc_to_full
+
+        cds.append(_make_cd(
+            scraper_id, company, company_full, invariant_names))
+
+        cf_sc_to_full[(scraper_id, company)].add(company_full)
 
     # group together by normed variants of aliases
     def keyfunc(cd):
         keys = set()
-        for alias in cd['aliases'] | cd['names']:
+        for alias in cd['aliases']:
             keys.update(get_company_keys(alias))
         return keys
 
@@ -147,21 +132,37 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
         cd = merge_dicts(cd_group)
 
         if not cd['scraper_companies']:
-            # this can happen if hard-coded variants don't match anything
+            # this shouldn't happen now; used to happen with
+            # hard-coded corrections
             continue
 
         # promote aliases to display names if they match a brand
         brands = select_brands(scratch_db, cd['scraper_companies'])
         normed_brands = {norm(b) for b in brands}
-        names = cd['names'] | {
-            a for a in cd['aliases'] if norm(a) in normed_brands}
+        brand_names = {a for a in cd['aliases'] if norm(a) in normed_brands}
+
+        # look up all scraper companies in a map from scraper company to
+        # set, and merge those all into one big set
+        def get_names(sc_to_x):
+            return {n for sc in cd['scraper_companies'] for n in sc_to_x[sc]}
+
+        # exclude names marked as alias-only
+        bad_names = get_names(sc_to_bad)
+        names = (cd['names'] | brand_names) - bad_names
 
         if not names:
+            # could happen if only name was flagged as is_alias?
             continue
 
         # pick company name and full name
         company = pick_company_name(names)
-        company_full = pick_company_full(names)
+
+        # pick full name. prioritize names marked is_full in company_name
+        # table, then names in company_full field, then other names
+        full_names = (get_names(cn_sc_to_full) or
+                      get_names(cf_sc_to_full) or
+                      names)
+        company_full = pick_company_full(full_names)
 
         # write to scraper_company_map
         for scraper_id, scraper_company in sorted(cd['scraper_companies']):
@@ -173,31 +174,28 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
         # write to company_name
         for company_name in sorted(names | cd['aliases']):
             row = dict(company=company, company_name=company_name)
-            if (company_name not in names or
-                (company_name in BAD_COMPANY_NAMES and
-                 company_name != company)):
-                row['is_alias'] = 1
+
             if company_name == company_full:
                 row['is_full'] = 1
+            elif company_name not in names:
+                row['is_alias'] = 1
+
             output_row(output_db, 'company_name', row)
 
 
-
 def pick_company_name(names):
-    # shortest non-bad name, ties broken by not all lower/upper, has accents
+    # shortest name. Ties broken by not all lower, all upper, has accents
     return sorted(names,
                   key=lambda n: (
-                      n in BAD_COMPANY_NAMES,
-                      len(n), n == n.lower(), n == n.upper(),
+                      len(n), n == n.lower(), n != n.upper(),
                       -len(n.encode('utf8'))))[0]
 
 
 def pick_company_full(names):
-    # longest name, ties broken by, not all lower/upper, has accents
+    # longest name. Ties broken by, not all lower, all upper, has accents
     return sorted(names,
                   key=lambda n: (
-                      n in BAD_COMPANY_NAMES,
-                      -len(n), n == n.lower(), n == n.upper(),
+                      -len(n), n == n.lower(), n != n.upper(),
                       -len(n.encode('utf8'))))[0]
 
 
@@ -231,11 +229,9 @@ def get_company_names(company):
 
 
 def _yield_company_names(company):
-    company = COMPANY_CORRECTIONS.get(company) or company
-
     # if it's a name like Foo, Inc., allow "Foo" as a display variant
     m = COMPANY_TYPE_RE.match(company)
-    if m and m.group('company') not in BAD_COMPANY_ALIASES:
+    if m:
         # process and re-build
         company = m.group('company')
         intl1 = m.group('intl1') or ''
@@ -247,8 +243,7 @@ def _yield_company_names(company):
         yield c_full
 
         # if the "Inc." etc. is part of the name, stop here
-        if (c_type in UNSTRIPPABLE_COMPANY_TYPES or
-            c_full in UNSTRIPPABLE_COMPANIES):
+        if c_type in UNSTRIPPABLE_COMPANY_TYPES:
             return
 
     yield company
@@ -258,9 +253,8 @@ def _yield_company_names(company):
         m = regex.match(company)
         if m:
             name = m.group('company')
-            if name not in BAD_COMPANY_ALIASES:
-                yield name
-                break
+            yield name
+            break
 
 
 @lru_cache()
@@ -277,9 +271,8 @@ def get_company_aliases(company):
         m = regex.match(company)
         if m:
             alias = m.group('company')
-            if alias not in BAD_COMPANY_ALIASES:
-                aliases.add(alias)
-                break
+            aliases.add(alias)
+            break
 
     # split on slashes
     for a in list(aliases):
@@ -300,3 +293,68 @@ def map_company(output_db, scraper_id, scraper_company):
         return rows[0][0]
     else:
         return None
+
+
+def _make_cd(scraper_id, company, company_name, invariant_names=()):
+    """Make a company dict for the given name."""
+    if not (scraper_id and company and company_name):
+        return dict(aliases=set(), names=set(), scraper_companies=set())
+
+    cd = dict(
+        aliases={company, company_name},
+        names={company_name},
+        scraper_companies={(scraper_id, company)},
+    )
+
+    # add variants of company_name
+    if company_name not in invariant_names:
+        cd['names'].update(get_company_names(company_name))
+        cd['aliases'].update(get_company_aliases(company_name))
+
+    # don't worry about variants of *company*; this is handled by making
+    # a dict for each value of *company* and then merging them
+    # (this is why we need *company* in *aliases*)
+
+    return cd
+
+
+def load_company_name_corrections(scratch_db):
+    """Process the company_name table. Returns
+    (cds, invariant_names, sc_to_bad, sc_to_full):
+
+    cds: list of company dicts (see
+         build_company_name_and_scraper_company_map_tables())
+    invariant_names: set of names that we shouldn't build variants of
+    sc_to_bad: map from (scraper_id, company) to an alias that should
+         not be a canonical name for that company
+    sc_to_full: map from (scraper_id, company) to a name explicitly
+         tagged as the company's full name
+    """
+    # make sure invariant company names get processed first
+    sql = 'SELECT * from company_name ORDER BY company'
+
+    cds = []
+    invariant_names = set()
+    sc_to_bad = defaultdict(set)
+    sc_to_full = defaultdict(set)
+
+    for row in scratch_db.execute(sql):
+        # special case: invariant company names
+        if not row['company']:
+            invariant_names.add(row['company_name'])
+            continue
+
+        cd = _make_cd(row['scraper_id'], row['company'],
+                      row['company_name'], invariant_names)
+
+        sc = (row['scraper_id'], row['company'])
+
+        if row['is_alias']:
+            # don't use company_name for naming
+            cd['names'] = set()
+            sc_to_bad[sc].add(row['company_name'])
+
+        elif row['is_full']:
+            sc_to_full[sc].add(row['company_name'])
+
+    return cds, invariant_names, sc_to_bad, sc_to_full
