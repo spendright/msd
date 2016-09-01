@@ -187,3 +187,53 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
         companies = {row['company'] for row in rows}
 
         self.assertEqual(companies, {'News Corporation'})
+
+    def test_asus(self):
+        # make sure company_name from company_name table is used
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company='ASUS',
+                 company_name='ASUSTek Computer Inc.',
+                 is_full=1,
+                 scraper_id='corrections/company_name')
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        map_rows = select_all(self.output_db, 'scraper_company_map')
+        companies = {row['company'] for row in map_rows}
+        self.assertEqual(companies, {'ASUS'})
+
+        name_rows = select_all(self.output_db, 'company_name')
+        company_fulls = {row['company_name'] for row in name_rows
+                         if row['is_full']}
+        self.assertEqual(company_fulls, {'ASUSTek Computer Inc.'})
+
+    def test_the_limited(self):
+        # "The Limited" is a very old name for L Brands
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company_name='The Limited',
+                 scraper_id='corrections/company_name'),
+            dict(company='L Brands',
+                 company_name='The Limited',
+                 is_alias=1,
+                 scraper_id='corrections/company_name'),
+        ])
+
+        insert_rows(self.scratch_db, 'rating', [
+            dict(campaign_id='hsus_fur_free',
+                 company='The Limited',
+                 judgment=1,
+                 scraper_id='campaign/hsus_fur_free'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        company_map = {
+            (row['scraper_id'], row['scraper_company']): row['company']
+            for row in select_all(self.output_db, 'scraper_company_map')
+        }
+        self.assertEqual(
+            company_map.get(('campaign/hsus_fur_free', 'The Limited')),
+            'L Brands')
