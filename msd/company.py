@@ -35,7 +35,7 @@ from .url import match_urls
 log = getLogger(__name__)
 
 
-# use this to turn e.g. "babyGap" into "baby Gap"
+# use this to turn e.g. "babyGap" into "baby Gap" for matching
 # this can also turn "G.I. Joe" into "G. I. Joe"
 CAMEL_CASE_RE = re.compile('(?<=[a-z\.])(?=[A-Z])')
 
@@ -172,7 +172,11 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
                 scraper_company=scraper_company))
 
         # write to company_name
-        for company_name in sorted(names | cd['aliases']):
+
+        # company and company_full should always be in cd; just hedging
+        company_names = cd['names'] | cd['aliases'] | {company, company_full}
+
+        for company_name in company_names:
             row = dict(company=company, company_name=company_name)
 
             if company_name == company_full:
@@ -356,5 +360,7 @@ def load_company_name_corrections(scratch_db):
 
         elif row['is_full']:
             sc_to_full[sc].add(row['company_name'])
+
+        cds.append(cd)
 
     return cds, invariant_names, sc_to_bad, sc_to_full
