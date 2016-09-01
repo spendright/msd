@@ -16,6 +16,7 @@ from unittest import TestCase
 from msd.company import build_company_name_and_scraper_company_map_tables
 from msd.company import get_company_aliases
 from msd.company import get_company_names
+from msd.company import pick_company_full
 from msd.company import pick_company_name
 
 from ...db import DBTestCase
@@ -78,6 +79,29 @@ class TestPickCompanyName(TestCase):
             pick_company_name(['Illy', 'illy']),
             'Illy')
 
+
+class TestPickCompanyFull(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_company_full, [])
+
+    def test_one(self):
+        self.assertEqual(pick_company_full(['Singularity']), 'Singularity')
+
+    def test_longest(self):
+        self.assertEqual(
+            pick_company_full(['The Coca-Cola Company', 'Coca-Cola']),
+            'The Coca-Cola Company')
+
+    def test_all_caps(self):
+        self.assertEqual(
+            pick_company_full(['ASUS', 'Asus']),
+            'ASUS')
+
+    def test_all_lowercase(self):
+        self.assertEqual(
+            pick_company_full(['Illy', 'illy']),
+            'Illy')
 
 
 class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
