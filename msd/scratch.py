@@ -18,7 +18,7 @@ from logging import getLogger
 from os import remove
 from os import rename
 from os.path import exists
-from os.path import getmtime
+from os.path import normpath
 
 from .db import create_index
 from .db import create_table
@@ -35,13 +35,9 @@ _INPUT_PATH_RE = re.compile(
     r'^(?P<scraper_prefix>.*)\.(?P<extension>(sqlite|yaml))$', re.I)
 
 
-def build_scratch_db(
-        scratch_db_path, input_db_paths, *, force=False):
+def build_scratch_db(scratch_db_path, input_db_paths):
     """Take data from the various input databases, and put it into
     a single, indexed database with correct table definitions.
-
-    Does nothing if the scratch DB is newer than all the input
-    DBs, unless *force* is true.
 
     Unlike the output database, every table in the scratch database
     has a scraper_id field. The names of each input database are used
@@ -53,15 +49,6 @@ def build_scratch_db(
     This also cleans smart quotes, excess whitespace, etc. out of the
     input data.
     """
-    # TODO: might also want to apply custom corrections here
-    if exists(scratch_db_path) and not force:
-        mtime = getmtime(scratch_db_path)
-        if all(exists(db_path) and getmtime(db_path) < mtime
-               for db_path in input_db_paths):
-            log.info('{} already exists and is up-to-date'.format(
-                scratch_db_path))
-            return
-
     scratch_db_tmp_path = scratch_db_path + '.tmp'
     if exists(scratch_db_tmp_path):
         remove(scratch_db_tmp_path)
@@ -122,7 +109,7 @@ def parse_input_path(path):
 
     file_type will be one of 'sqlite' or 'yaml'
     """
-    m = _INPUT_PATH_RE.match(path)
+    m = _INPUT_PATH_RE.match(normpath(path))
     if not m:
         raise ValueError('Unknown input file type: {}'.format(path))
     return m.group('scraper_prefix'), m.group('extension').lower()

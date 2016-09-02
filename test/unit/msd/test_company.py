@@ -16,6 +16,8 @@ from unittest import TestCase
 from msd.company import build_company_name_and_scraper_company_map_tables
 from msd.company import get_company_aliases
 from msd.company import get_company_names
+from msd.company import pick_company_full
+from msd.company import pick_company_name
 
 from ...db import DBTestCase
 from ...db import insert_rows
@@ -34,7 +36,7 @@ class TestGetCompanyNames(TestCase):
         self.assertEqual(get_company_names('L Brands'), {'L Brands'})
 
     def test_weird_caching_bug(self):
-        # for some reason, would get {'L', 'L Brands'} after calling
+        # would get {'L', 'L Brands'} after calling
         # get_company_aliases()
         get_company_aliases('L Brands')
         self.assertEqual(get_company_names('L Brands'), {'L Brands'})
@@ -51,6 +53,55 @@ class TestGetCompanyNames(TestCase):
         # this tests #12
         self.assertEqual(get_company_names('Servals Pvt Ltd'),
                          {'Servals', 'Servals Pvt Ltd'})
+
+
+
+class TestPickCompanyName(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_company_name, [])
+
+    def test_one(self):
+        self.assertEqual(pick_company_name(['Singularity']), 'Singularity')
+
+    def test_shortest(self):
+        self.assertEqual(
+            pick_company_name(['The Coca-Cola Company', 'Coca-Cola']),
+            'Coca-Cola')
+
+    def test_all_caps(self):
+        self.assertEqual(
+            pick_company_name(['ASUS', 'Asus']),
+            'ASUS')
+
+    def test_all_lowercase(self):
+        self.assertEqual(
+            pick_company_name(['Illy', 'illy']),
+            'Illy')
+
+
+class TestPickCompanyFull(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_company_full, [])
+
+    def test_one(self):
+        self.assertEqual(pick_company_full(['Singularity']), 'Singularity')
+
+    def test_longest(self):
+        self.assertEqual(
+            pick_company_full(['The Coca-Cola Company', 'Coca-Cola']),
+            'The Coca-Cola Company')
+
+    def test_all_caps(self):
+        self.assertEqual(
+            pick_company_full(['ASUS', 'Asus']),
+            'ASUS')
+
+    def test_all_lowercase(self):
+        self.assertEqual(
+            pick_company_full(['Illy', 'illy']),
+            'Illy')
 
 
 class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
@@ -78,6 +129,30 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
         self.assertEqual(len(rows), 2)
         self.assertIn('L.', companies)
 
+    def test_merge_pvh_and_pvh_corp(self):
+        # regression test for separate PVH, PVH Corp.
+        insert_rows(self.scratch_db, 'company', [
+            dict(company='PVH',
+                 scraper_id='campaign.hrc'),
+            dict(company='PVH Corp',
+                 scraper_id='campaign.btb_fashion'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+        self.output_db, self.scratch_db)
+
+        # verify that companies merged
+        map_rows = select_all(self.output_db, 'scraper_company_map')
+        self.assertEqual(len(map_rows), 2)
+        self.assertEqual(set(row['company'] for row in map_rows), {'PVH'})
+
+        name_rows = select_all(self.output_db, 'scraper_company_map')
+        self.assertEqual(len(map_rows), 2)
+        for row in name_rows:
+            if row.get('is_full'):
+                # add trailing period
+                self.assertEqual(row['company_name'], 'PVH Corp.')
+
     def test_no_single_letter_company_names(self):
 
         insert_rows(self.scratch_db, 'company', [
@@ -92,3 +167,73 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
         companies = {row['company'] for row in rows}
 
         self.assertEqual(companies, {'L Brands'})
+
+    def test_news_corporation(self):
+        # mark company name as invariant
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company_name='News Corporation',
+                 scraper_id='corrections.company_name'),
+        ])
+
+        insert_rows(self.scratch_db, 'company', [
+            dict(company='News Corporation',
+                 scraper_id='campaign.climate_counts'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        rows = select_all(self.output_db, 'scraper_company_map')
+        companies = {row['company'] for row in rows}
+
+        self.assertEqual(companies, {'News Corporation'})
+
+    def test_asus(self):
+        # make sure company_name from company_name table is used
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company='ASUS',
+                 company_name='ASUSTek Computer Inc.',
+                 is_full=1,
+                 scraper_id='corrections/company_name')
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        map_rows = select_all(self.output_db, 'scraper_company_map')
+        companies = {row['company'] for row in map_rows}
+        self.assertEqual(companies, {'ASUS'})
+
+        name_rows = select_all(self.output_db, 'company_name')
+        company_fulls = {row['company_name'] for row in name_rows
+                         if row['is_full']}
+        self.assertEqual(company_fulls, {'ASUSTek Computer Inc.'})
+
+    def test_the_limited(self):
+        # "The Limited" is a very old name for L Brands
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(company_name='The Limited',
+                 scraper_id='corrections/company_name'),
+            dict(company='L Brands',
+                 company_name='The Limited',
+                 is_alias=1,
+                 scraper_id='corrections/company_name'),
+        ])
+
+        insert_rows(self.scratch_db, 'rating', [
+            dict(campaign_id='hsus_fur_free',
+                 company='The Limited',
+                 judgment=1,
+                 scraper_id='campaign/hsus_fur_free'),
+        ])
+
+        build_company_name_and_scraper_company_map_tables(
+            self.output_db, self.scratch_db)
+
+        company_map = {
+            (row['scraper_id'], row['scraper_company']): row['company']
+            for row in select_all(self.output_db, 'scraper_company_map')
+        }
+        self.assertEqual(
+            company_map.get(('campaign/hsus_fur_free', 'The Limited')),
+            'L Brands')

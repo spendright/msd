@@ -14,6 +14,7 @@
 import logging
 from argparse import ArgumentParser
 
+import msd
 from msd.output import build_output_db
 from msd.scratch import build_scratch_db
 
@@ -26,20 +27,22 @@ log = logging.getLogger('msd.cmd')
 def main(args=None):
     opts = parse_args()
 
+    if opts.version:
+        print(msd.__version__)
+        return
+
     set_up_logging(verbose=opts.verbose, quiet=opts.quiet)
 
     run(input_db_paths=opts.input_dbs, scratch_db_path=opts.scratch_db,
-        output_db_path=opts.output_db, force_rebuild_scratch=opts.force)
+        output_db_path=opts.output_db)
 
 
 def run(*,
-        force_rebuild_scratch=False,
         input_db_paths=(),
         output_db_path=DEFAULT_OUTPUT_DB,
         scratch_db_path=DEFAULT_SCRATCH_DB):
 
-    build_scratch_db(scratch_db_path, input_db_paths,
-                     force=force_rebuild_scratch)
+    build_scratch_db(scratch_db_path, input_db_paths)
 
     build_output_db(scratch_db_path, output_db_path)
 
@@ -56,7 +59,7 @@ def set_up_logging(*, verbose=False, quiet=False):
 def parse_args(args=None):
     parser = ArgumentParser()
     parser.add_argument(
-        dest='input_dbs', nargs='+',
+        dest='input_dbs', nargs='*',
         help='SQLite databases and/or YAML database dumps to merge')
     parser.add_argument(
         '-v', '--verbose', dest='verbose', default=False, action='store_true',
@@ -66,7 +69,7 @@ def parse_args(args=None):
         help='Turn off info logging')
     parser.add_argument(
         '-f', '--force', dest='force', default=False, action='store_true',
-        help='Force rebuild of scratch DB, even if newer than input')
+        help='Does nothing (scratch DB is always rebuilt)')
     parser.add_argument(
         '-i', '--scratch', dest='scratch_db',
         default=DEFAULT_SCRATCH_DB,
@@ -74,6 +77,9 @@ def parse_args(args=None):
     parser.add_argument(
         '-o', '--output', dest='output_db', default=DEFAULT_OUTPUT_DB,
         help='Path to output DB (default: %(default)s)')
+    parser.add_argument(
+        '-V', '--version', dest='version', default=False,
+        action='store_true', help='Print version and exit')
 
     return parser.parse_args(args)
 
