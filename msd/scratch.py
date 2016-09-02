@@ -18,6 +18,7 @@ from logging import getLogger
 from os import remove
 from os import rename
 from os.path import exists
+from os.path import normpath
 
 from .db import create_index
 from .db import create_table
@@ -108,7 +109,7 @@ def parse_input_path(path):
 
     file_type will be one of 'sqlite' or 'yaml'
     """
-    m = _INPUT_PATH_RE.match(path)
+    m = _INPUT_PATH_RE.match(normpath(path))
     if not m:
         raise ValueError('Unknown input file type: {}'.format(path))
     return m.group('scraper_prefix'), m.group('extension').lower()
