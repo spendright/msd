@@ -32,6 +32,7 @@ from .company import build_company_table
 from .company import build_company_name_and_scraper_company_map_tables
 from .rating import build_rating_table
 from .scraper import build_scraper_table
+from .subsidiary import build_subsidiary_table
 
 from .db import open_db
 
@@ -67,7 +68,8 @@ def fill_output_db(output_db, scratch_db):
     build_company_name_and_scraper_company_map_tables(output_db, scratch_db)
     build_company_table(output_db, scratch_db)
 
-    # TODO: subsidiaries would be handled here
+    # subsidaries
+    build_subsidiary_table(output_db, scratch_db)
 
     # brands
     build_scraper_brand_map_table(output_db, scratch_db)
