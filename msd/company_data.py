@@ -62,17 +62,23 @@ GROUPE_X_RE = re.compile(
     r') (?P<company>.*)$'
 )
 
+# X.com e.g. "Zappos.com"
+X_COM_RE = re.compile(r'^(?P<company>.*)\.com$')
+
 # regexes for pulling out company names that are okay for matching
 # but shouldn't automatically qualify to be used as a company's canonical name
 COMPANY_ALIAS_REGEXES = [
     THE_X_COMPANY_RE,
     X_COMPANY_RE,
     GROUPE_X_RE,
+    X_COM_RE,
 ]
 
 # Inc. etc. -- stuff to strip before even doing the above
 COMPANY_TYPE_RE = re.compile(
-    r'^(?P<company>.*?)(?P<intl1> International)?,? (?P<type>'
+    r'^(?P<company>.*?)'
+    r'(?P<intl1>\s+International)?(?P<comma>,?)\s+'
+    r'(?P<type>'
     r'A\.?& S\. Klein GmbH \& Co\. KG'
     r'|A/S'
     r'|AB'
@@ -80,6 +86,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|AS'
     r'|ASA'
     r'|Ab'
+    r'|A\.Ş'
     r'|BV'
     r'|B\.V\.'
     r'|B.V. Nederland'
@@ -128,7 +135,8 @@ COMPANY_TYPE_RE = re.compile(
     r'|gmbh'
     r'|inc\.?'
     r'|plc\.?'
-    r')(?P<intl2> International)?$'
+    r')'
+    r'(?P<intl2>\s+International)?$'
 )
 
 COMPANY_TYPE_CORRECTIONS = {

@@ -54,6 +54,27 @@ class TestGetCompanyNames(TestCase):
         self.assertEqual(get_company_names('Servals Pvt Ltd'),
                          {'Servals', 'Servals Pvt Ltd'})
 
+    def test_turkish_a_s(self):
+        # this tests #45
+        self.assertEqual(get_company_names('Arçelik A.Ş'),
+                         {'Arçelik', 'Arçelik A.Ş'})
+
+    def test_comma_llc(self):
+        # this tests #35
+        self.assertEqual(get_company_names('Indosole, LLC'),
+                         {'Indosole', 'Indosole, LLC'})
+
+    def test_x_dot_com(self):
+        self.assertEqual(get_company_names('Zappos.com'),
+                         {'Zappos.com'})
+
+
+class TestGetCompanyAliases(TestCase):
+
+    def test_x_com(self):
+        # this tests #52
+        self.assertEqual(get_company_aliases('Zappos.com'),
+                         {'Zappos.com', 'Zappos'})
 
 
 class TestPickCompanyName(TestCase):

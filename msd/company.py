@@ -244,10 +244,11 @@ def _yield_company_names(company):
         # process and re-build
         company = m.group('company')
         intl1 = m.group('intl1') or ''
+        comma = m.group('comma') or ''
         c_type = m.group('type')
         intl2 = m.group('intl2') or ''
         c_type = COMPANY_TYPE_CORRECTIONS.get(c_type) or c_type
-        c_full = company + intl1 + ' ' + c_type + intl2
+        c_full = company + intl1 + comma + ' ' + c_type + intl2
 
         yield c_full
 
