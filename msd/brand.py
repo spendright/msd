@@ -133,7 +133,8 @@ def fill_scraper_brand_map_table_for_companies(
 
     # grab company names, to fix capitalization of brand (see #7)
     company_name_sql = (
-        'SELECT company_name FROM company_name WHERE company IN ({})'.format(
+        'SELECT company_name FROM company_name WHERE company IN ({})'
+        ' AND NOT is_alias'.format(
             ', '.join('?' for c in companies)))
 
     company_names = {
