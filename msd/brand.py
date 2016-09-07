@@ -128,7 +128,6 @@ def fill_scraper_brand_map_table_for_companies(
                     scraper_brands={
                         (scraper_id, scraper_company, scraper_brand)},
                     brands={brand},
-                    companies={company},
                 ))
 
     # grab company names, to fix capitalization of brand (see #7)
@@ -155,8 +154,10 @@ def fill_scraper_brand_map_table_for_companies(
             continue
 
         brand = pick_brand_name(bd['brands'], company_names)
-        company = pick_company_for_brand(
-            bd['companies'], bd['brands'], company_to_depth)
+        # allow matching brand with any company in hierarchy
+        # e.g. move Tempur-Pedic and Tempur from Sealy to Tempur-Pedic
+        # because they're both owned by Tempur Sealy
+        company = pick_company_for_brand(company_to_depth, bd['brands'])
 
         for (scraper_id, scraper_company, scraper_brand
                 ) in bd['scraper_brands']:
@@ -223,7 +224,7 @@ def pick_brand_name(names, company_names=()):
     return sorted(names, key=keyfunc, reverse=True)[0]
 
 
-def pick_company_for_brand(companies, brand_names, company_to_depth):
+def pick_company_for_brand(company_to_depth, brand_names):
     """Given several companies to which a brand might belong, prefer
     the one that starts with a proposed brand name, and then company
     lowest in the subsidiary hierarchy"""
@@ -236,7 +237,7 @@ def pick_company_for_brand(companies, brand_names, company_to_depth):
                -company_to_depth[company],
                company)
 
-    return sorted(companies, key=keyfunc)[0]
+    return sorted(company_to_depth, key=keyfunc)[0]
 
 
 def split_brand_and_tm(scraper_brand):

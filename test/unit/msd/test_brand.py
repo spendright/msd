@@ -16,6 +16,7 @@ from unittest import TestCase
 
 from msd.brand import build_scraper_brand_map_table
 from msd.brand import pick_brand_name
+from msd.brand import pick_company_for_brand
 from msd.brand import split_brand_and_tm
 from msd.db import insert_row
 
@@ -194,3 +195,28 @@ class TestPickBrandName(TestCase):
         self.assertEqual(
             pick_brand_name(['Blackberry', 'BlackBerry']),
             'BlackBerry')
+
+
+class TestPickCompanyForBrand(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_company_for_brand, {}, set())
+
+    def test_one(self):
+        self.assertEqual(
+            pick_company_for_brand({'Clorox': 0}, {'Liquid-Plumr'}),
+            'Clorox')
+
+    def test_match_name(self):
+        self.assertEqual(
+            pick_company_for_brand(
+                {'Sealy': 1, 'Tempur-Pedic': 1, 'Tempur Sealy': 0},
+                {'Tempur'}),
+            'Tempur-Pedic')
+
+    def test_pick_deepest_company(self):
+        self.assertEqual(
+            pick_company_for_brand(
+                {'MEGA Brands': 1, 'Mattel': 0},
+                {'Rose Art'}),
+            'MEGA Brands')
