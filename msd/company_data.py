@@ -72,7 +72,9 @@ COMPANY_ALIAS_REGEXES = [
 
 # Inc. etc. -- stuff to strip before even doing the above
 COMPANY_TYPE_RE = re.compile(
-    r'^(?P<company>.*?)(?P<intl1> International)?,? (?P<type>'
+    r'^(?P<company>.*?)'
+    r'(?P<intl1>\s+International)?(?P<comma>,?)\s+'
+    r'(?P<type>'
     r'A\.?& S\. Klein GmbH \& Co\. KG'
     r'|A/S'
     r'|AB'
@@ -129,7 +131,8 @@ COMPANY_TYPE_RE = re.compile(
     r'|gmbh'
     r'|inc\.?'
     r'|plc\.?'
-    r')(?P<intl2> International)?$'
+    r')'
+    r'(?P<intl2>\s+International)?$'
 )
 
 COMPANY_TYPE_CORRECTIONS = {
