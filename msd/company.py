@@ -16,7 +16,6 @@ from collections import defaultdict
 from functools import lru_cache
 from logging import getLogger
 
-from .brand import select_brands
 from .company_data import COMPANY_ALIAS_REGEXES
 from .company_data import COMPANY_NAME_REGEXES
 from .company_data import COMPANY_TYPE_CORRECTIONS
@@ -141,6 +140,8 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
             continue
 
         # promote aliases to display names if they match a brand
+        from .brand import select_brands
+
         brands = select_brands(scratch_db, cd['scraper_companies'])
         normed_brands = {norm(b) for b in brands}
         brand_names = {a for a in cd['aliases'] if norm(a) in normed_brands}

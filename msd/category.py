@@ -204,6 +204,6 @@ def get_implied_categories(output_db, subcategories):
 
     select_sql = ('SELECT DISTINCT `category` from `subcategory`'
                   ' WHERE `subcategory` IN ({})').format(
-                      ', '.join('?' for _ in range(len(subcategories))))
+                      ', '.join('?' for s in subcategories))
 
     return {row[0] for row in output_db.execute(select_sql, subcategories)}

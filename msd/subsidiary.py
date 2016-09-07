@@ -87,3 +87,30 @@ def build_subsidiary_table(output_db, scratch_db):
                 subsidiary=company,
                 subsidiary_depth=len(ancestry),
             ))
+
+
+def is_subsidiary(output_db, company):
+    """Is the given company a subsidiary?"""
+    sql = 'SELECT 1 FROM subsidiary WHERE subsidiary = ?'
+
+    rows = list(output_db.execute(sql, [company]))
+
+    return bool(rows)
+
+
+def select_company_to_depth(output_db, parent_company):
+    """Return a map from company to depth for *parent_company* and
+    all its subsidiaries.
+
+    (This will be empty if *parent_company* doesn't appear in the
+    subsidiary table; infer a depth of 0 yourself.)
+    """
+    sql = 'SELECT * FROM subsidiary WHERE company = ?'
+
+    company_to_depth = {}
+
+    for row in output_db.execute(sql, [parent_company]):
+        company_to_depth[row['company']] = row['company_depth']
+        company_to_depth[row['subsidiary']] = row['subsidiary_depth']
+
+    return company_to_depth

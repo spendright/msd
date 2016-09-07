@@ -52,7 +52,7 @@ class TestBuildScraperBrandMapTable(DBTestCase):
     SCRATCH_TABLES = [
         'brand', 'category', 'claim', 'rating', 'scraper_brand_map']
 
-    OUTPUT_TABLES = ['company_name', 'scraper_company_map']
+    OUTPUT_TABLES = ['company_name', 'scraper_company_map', 'subsidiary']
 
     def test_merge_differing_capitalization(self):
         # this tests #19
