@@ -55,7 +55,8 @@ def build_subsidiary_table(output_db, scratch_db):
 
         # cycles shouldn't happen; just don't loop forever
         if parents & not_parents:
-            log.warn('cyclical subsidiary relationship for {}'.format(company))
+            log.warning(
+                'cyclical subsidiary relationship for {}'.format(company))
             parents = parents - not_parents
 
         if len(parents) == 0:
