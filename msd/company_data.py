@@ -62,12 +62,16 @@ GROUPE_X_RE = re.compile(
     r') (?P<company>.*)$'
 )
 
+# X.com e.g. "Zappos.com"
+X_COM_RE = re.compile(r'^(?P<company>.*)\.com$')
+
 # regexes for pulling out company names that are okay for matching
 # but shouldn't automatically qualify to be used as a company's canonical name
 COMPANY_ALIAS_REGEXES = [
     THE_X_COMPANY_RE,
     X_COMPANY_RE,
     GROUPE_X_RE,
+    X_COM_RE,
 ]
 
 # Inc. etc. -- stuff to strip before even doing the above
