@@ -142,6 +142,32 @@ class TestBuildSubsidiaryTable(DBTestCase):
             ),
         ])
 
+    def test_break_self_cycle(self):
+        insert_rows(self.scratch_db, 'subsidiary', [
+            dict(
+                company='Jones Group',
+                scraper_id='s',
+                subsidiary='Nine West',
+            ),
+        ])
+
+        insert_rows(self.scratch_db, 'company_name', [
+            dict(
+                company='Nine West',
+                company_name='Jones Group',
+                is_alias=True,
+                scraper_id='s',
+            ),
+        ])
+
+        with patch('msd.subsidiary.log') as mock_log:
+            self.build_tables()
+
+            self.assertTrue(mock_log.warning.called)
+
+        rows = select_all(self.output_db, 'subsidiary')
+        self.assertEqual(rows, [])
+
     def test_ignore_bad_entries(self):
         insert_rows(self.scratch_db, 'subsidiary', [
             dict(
