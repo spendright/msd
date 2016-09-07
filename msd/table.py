@@ -164,6 +164,18 @@ TABLES = dict(
         ),
         primary_key=['category', 'subcategory'],
     ),
+    subsidiary=dict(
+        columns=dict(
+            company='text',
+            company_depth='tinyint',
+            subsidiary='text',
+            subsidiary_depth='tinyint',
+        ),
+        indexes=[
+            ['subsidiary'],
+        ],
+        primary_key=['company', 'subsidiary'],
+    ),
     url=dict(
         columns=dict(
             url='text',

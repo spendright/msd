@@ -96,12 +96,16 @@ def build_company_name_and_scraper_company_map_tables(output_db, scratch_db):
 
     cds.extend(cn_cds)
 
-    # populate with any value of 'company' field
-    for scraper_id, company in (
-            get_distinct_values(scratch_db, ['scraper_id', 'company'])):
+    # populate with any value of 'company' or 'subsidiary' field
+    for c_field in ('company', 'subsidiary'):
+        for scraper_id, company in (
+                get_distinct_values(scratch_db, ['scraper_id', c_field])):
 
-        cds.append(_make_cd(
-            scraper_id, company, company, invariant_names))
+            if not company:
+                continue
+
+            cds.append(_make_cd(
+                scraper_id, company, company, invariant_names))
 
     # populate with values of 'company_full' field. these take lower
     # priority than company_name rows tagged with is_full

@@ -109,7 +109,8 @@ class TestBuildCompanyNameAndScraperCompanyMapTables(DBTestCase):
     # need everything with a "company" column in it
     SCRATCH_TABLES = {
         'brand', 'category', 'claim', 'company', 'company_name',
-        'rating', 'scraper_brand_map', 'scraper_company_map'}
+        'rating', 'scraper_brand_map', 'scraper_company_map',
+        'subsidiary'}
 
     def test_dont_merge_l_international_and_l_brands(self):
         # this tests #33
