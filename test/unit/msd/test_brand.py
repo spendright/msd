@@ -86,3 +86,46 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_company='Newell Rubbermaid',
                   scraper_id='sr.campaign.hrc'),
             ])
+
+    def test_push_brand_down_to_subsidiary(self):
+        # this tests #16
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Puma',
+                 company='Puma',
+                 scraper_id='campaign.btb_fashion'),
+            dict(brand='Puma',
+                 company='Kering SA',
+                 scraper_id='campaign.rankabrand'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Puma',
+                 scraper_company='Puma',
+                 scraper_id='campaign.btb_fashion'),
+            dict(company='Kering',
+                 scraper_company='Kering SA',
+                 scraper_id='campaign.rankabrand'),
+        ])
+
+        insert_rows(self.output_db, 'subsidiary', [
+            dict(company='Kering',
+                 company_depth=0,
+                 subsidiary='Puma',
+                 subsidiary_depth=1),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [dict(brand='Puma',
+                  company='Puma',
+                  scraper_brand='Puma',
+                  scraper_company='Kering SA',
+                  scraper_id='campaign.rankabrand'),
+             dict(brand='Puma',
+                  company='Puma',
+                  scraper_brand='Puma',
+                  scraper_company='Puma',
+                  scraper_id='campaign.btb_fashion'),
+            ])
