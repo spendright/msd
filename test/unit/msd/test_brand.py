@@ -185,6 +185,12 @@ class TestPickBrandName(TestCase):
         self.assertEqual(pick_brand_name(['Asus', 'ASUS']), 'Asus')
 
     def test_company_name_match(self):
+        # tests #40
         self.assertEqual(
             pick_brand_name(['Asus', 'ASUS'], company_names={'ASUS'}),
             'ASUS')
+
+    def test_more_caps(self):
+        self.assertEqual(
+            pick_brand_name(['Blackberry', 'BlackBerry']),
+            'BlackBerry')
