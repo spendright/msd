@@ -59,6 +59,11 @@ class TestGetCompanyNames(TestCase):
         self.assertEqual(get_company_names('Arçelik A.Ş'),
                          {'Arçelik', 'Arçelik A.Ş'})
 
+    def test_comma_llc(self):
+        # this tests #35
+        self.assertEqual(get_company_names('Indosole, LLC'),
+                         {'Indosole', 'Indosole, LLC'})
+
 
 class TestPickCompanyName(TestCase):
 
