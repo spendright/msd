@@ -140,7 +140,7 @@ def fill_scraper_brand_map_table_for_companies(
         row[0] for row in output_db.execute(company_name_sql, companies)}
 
     for name in company_names:
-        bds.append(dict(scraper_brands={}, brands={name}, companies=set()))
+        bds.append(dict(scraper_brands=set(), brands={name}, companies=set()))
 
     # merge brands
     def keyfunc(bd):
