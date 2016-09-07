@@ -56,7 +56,8 @@ def build_subsidiary_table(output_db, scratch_db):
         # cycles shouldn't happen; just don't loop forever
         if parents & not_parents:
             log.warning(
-                'cyclical subsidiary relationship for {}'.format(company))
+                'cyclical subsidiary relationship for {} (parents: {})'.format(
+                    company, ', '.join(parents & not_parents)))
             parents = parents - not_parents
 
         if len(parents) == 0:
@@ -75,7 +76,7 @@ def build_subsidiary_table(output_db, scratch_db):
         return sorted(ancestries, key=lambda a: (-len(a), a))[0]
 
     for company in sorted(company_to_parents):
-        pick_ancestry(company, set())
+        pick_ancestry(company, {company})
 
     # output rows
 
