@@ -15,6 +15,7 @@
 from unittest import TestCase
 
 from msd.brand import build_scraper_brand_map_table
+from msd.brand import pick_brand_name
 from msd.brand import split_brand_and_tm
 from msd.db import insert_row
 
@@ -87,6 +88,44 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_id='sr.campaign.hrc'),
             ])
 
+    def test_merge_hyphens(self):
+        # tests #31
+
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Liquid Plumr',
+                 company='Clorox',
+                 scraper_id='company.clorox'),
+            dict(brand='Liquid-Plumr',
+                 company='Clorox',
+                 scraper_id='campaign.hrc'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Clorox',
+                 scraper_id='company.clorox',
+                 scraper_company='Clorox'),
+            dict(company='Clorox',
+                 scraper_id='campaign.hrc',
+                 scraper_company='Clorox'),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [
+                dict(brand='Liquid-Plumr',
+                     company='Clorox',
+                     scraper_brand='Liquid Plumr',
+                     scraper_company='Clorox',
+                     scraper_id='company.clorox'),
+                dict(brand='Liquid-Plumr',
+                     company='Clorox',
+                     scraper_brand='Liquid-Plumr',
+                     scraper_company='Clorox',
+                     scraper_id='campaign.hrc'),
+            ])
+
     def test_push_brand_down_to_subsidiary(self):
         # this tests #16
         insert_rows(self.scratch_db, 'brand', [
@@ -129,3 +168,12 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_company='Puma',
                   scraper_id='campaign.btb_fashion'),
             ])
+
+
+class TestPickBrandName(TestCase):
+
+    def test_empty(self):
+        self.assertRaises(IndexError, pick_brand_name, [])
+
+    def test_one(self):
+        self.assertEqual(pick_brand_name(['Apple']), 'Apple')

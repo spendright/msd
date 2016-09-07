@@ -72,5 +72,5 @@ def norm(s):
 
 
 def smunch(s):
-    """Like norm(), except we remove whitespace too."""
-    return WHITESPACE_RE.sub('', norm(s))
+    """Like norm(), except we remove whitespace and hyphens too."""
+    return WHITESPACE_RE.sub('', norm(s)).replace('-', '')
