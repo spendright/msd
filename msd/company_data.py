@@ -80,6 +80,7 @@ COMPANY_TYPE_RE = re.compile(
     r'|AS'
     r'|ASA'
     r'|Ab'
+    r'|A\.Ş'
     r'|BV'
     r'|B\.V\.'
     r'|B.V. Nederland'
