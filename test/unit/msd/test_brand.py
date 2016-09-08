@@ -128,7 +128,7 @@ class TestBuildScraperBrandMapTable(DBTestCase):
             ])
 
     def test_push_brand_down_to_subsidiary(self):
-        # this tests #16
+        # tests #16
         insert_rows(self.scratch_db, 'brand', [
             dict(brand='Puma',
                  company='Puma',
@@ -169,6 +169,64 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_company='Puma',
                   scraper_id='campaign.btb_fashion'),
             ])
+
+    def test_match_canonical_company_name_only(self):
+        # tests #40
+
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Asus',
+                 company='Asus',
+                 scraper_id='campaign.btb_electronics'),
+            dict(brand='Asus',
+                 company='ASUSTeK Computer Incorporated',
+                 scraper_id='campaign.rankabrand'),
+        ])
+
+        # we picked ASUS as the canonical name based on company_name
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='ASUS',
+                 scraper_id='campaign.btb_electronics',
+                 scraper_company='Asus'),
+            dict(company='ASUS',
+                 scraper_id='campaign.rankabrand',
+                 scraper_company='ASUSTeK Computer Incorporated'),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [
+                dict(brand='ASUS',
+                     company='ASUS',
+                     scraper_brand='Asus',
+                     scraper_company='ASUSTeK Computer Incorporated',
+                     scraper_id='campaign.rankabrand'),
+                dict(brand='ASUS',
+                     company='ASUS',
+                     scraper_brand='Asus',
+                     scraper_company='Asus',
+                     scraper_id='campaign.btb_electronics'),
+            ])
+
+    def test_dump_empty_brand(self):
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='™',
+                 company='Voidcorp',
+                 scraper_id='s'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Voidcorp',
+                 scraper_company='Voidcorp',
+                 scraper_id='s'),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [])
 
 
 class TestPickBrandName(TestCase):
