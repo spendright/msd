@@ -123,24 +123,16 @@ def fill_scraper_brand_map_table_for_companies(
         for scraper_brand in scraper_brands:
             brand, _ = split_brand_and_tm(scraper_brand)
 
-            if scraper_brand:
+            if brand:
                 bds.append(dict(
                     scraper_brands={
                         (scraper_id, scraper_company, scraper_brand)},
                     brands={brand},
                 ))
 
-    # grab company names, to fix capitalization of brand (see #7)
-    company_name_sql = (
-        'SELECT company_name FROM company_name WHERE company IN ({})'
-        ' AND NOT is_alias'.format(
-            ', '.join('?' for c in companies)))
-
-    company_names = {
-        row[0] for row in output_db.execute(company_name_sql, companies)}
-
-    for name in company_names:
-        bds.append(dict(scraper_brands=set(), brands={name}, companies=set()))
+    # add canonical company names as possible brand names
+    for company in companies:
+        bds.append(dict(scraper_brands=set(), brands={company}))
 
     # merge brands
     def keyfunc(bd):
@@ -153,7 +145,7 @@ def fill_scraper_brand_map_table_for_companies(
         if not bd['scraper_brands']:
             continue
 
-        brand = pick_brand_name(bd['brands'], company_names)
+        brand = pick_brand_name(bd['brands'], companies)
         # allow matching brand with any company in hierarchy
         # e.g. move Tempur-Pedic and Tempur from Sealy to Tempur-Pedic
         # because they're both owned by Tempur Sealy
