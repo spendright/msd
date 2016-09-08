@@ -209,6 +209,24 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                      scraper_id='campaign.btb_electronics'),
             ])
 
+    def test_dump_empty_brand(self):
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='™',
+                 company='Voidcorp',
+                 scraper_id='s'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Voidcorp',
+                 scraper_company='Voidcorp',
+                 scraper_id='s'),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [])
 
 
 class TestPickBrandName(TestCase):
