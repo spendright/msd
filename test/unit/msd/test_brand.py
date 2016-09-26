@@ -127,7 +127,7 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                      scraper_id='campaign.hrc'),
             ])
 
-    def test_push_brand_down_to_subsidiary(self):
+    def test_prefer_subsidiary_for_brand(self):
         # tests #16
         insert_rows(self.scratch_db, 'brand', [
             dict(brand='Puma',
@@ -168,6 +168,69 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_brand='Puma',
                   scraper_company='Puma',
                   scraper_id='campaign.btb_fashion'),
+            ])
+
+    def test_match_brand_to_subsidiary_name(self):
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Puma',
+                 company='Kering SA',
+                 scraper_id='campaign.rankabrand'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Kering',
+                 scraper_company='Kering SA',
+                 scraper_id='campaign.rankabrand'),
+        ])
+
+        insert_rows(self.output_db, 'subsidiary', [
+            dict(company='Kering',
+                 company_depth=0,
+                 subsidiary='Puma',
+                 subsidiary_depth=1),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [dict(brand='Puma',
+                  company='Puma',
+                  scraper_brand='Puma',
+                  scraper_company='Kering SA',
+                  scraper_id='campaign.rankabrand'),
+            ])
+
+    def test_dont_push_brand_to_unrelated_subsidiary(self):
+        # tests #59
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Dove',
+                 company='Unilever',
+                 scraper_id='campaign.hrc'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Unilever',
+                 scraper_company='Unilever',
+                 scraper_id='campaign.hrc'),
+        ])
+
+        insert_rows(self.output_db, 'subsidiary', [
+            dict(company='Unilever',
+                 company_depth=0,
+                 subsidiary="Ben & Jerry's",
+                 subsidiary_depth=1),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [dict(brand='Dove',
+                  company='Unilever',
+                  scraper_brand='Dove',
+                  scraper_company='Unilever',
+                  scraper_id='campaign.hrc'),
             ])
 
     def test_match_canonical_company_name_only(self):
@@ -258,23 +321,34 @@ class TestPickBrandName(TestCase):
 class TestPickCompanyForBrand(TestCase):
 
     def test_empty(self):
-        self.assertRaises(IndexError, pick_company_for_brand, {}, set())
+        self.assertRaises(IndexError, pick_company_for_brand, set(), set(), {})
 
     def test_one(self):
         self.assertEqual(
-            pick_company_for_brand({'Clorox': 0}, {'Liquid-Plumr'}),
-            'Clorox')
-
-    def test_match_name(self):
-        self.assertEqual(
             pick_company_for_brand(
-                {'Sealy': 1, 'Tempur-Pedic': 1, 'Tempur Sealy': 0},
-                {'Tempur'}),
-            'Tempur-Pedic')
+                {'Clorox'}, {'Liquid-Plumr'}, {'Clorox': 0}),
+            'Clorox')
 
     def test_pick_deepest_company(self):
         self.assertEqual(
             pick_company_for_brand(
-                {'MEGA Brands': 1, 'Mattel': 0},
-                {'Rose Art'}),
+                {'Rose Art', 'MEGA Brands'},
+                {'Rose Art'},
+                {'MEGA Brands': 1, 'Mattel': 0}),
             'MEGA Brands')
+
+    def test_dont_pick_unrelated_subsidiary(self):
+        self.assertEqual(
+            pick_company_for_brand(
+                {'Unilever'},
+                {'Dove'},
+                {'Unilever': 0, "Ben & Jerry's": 1}),
+            'Unilever')
+
+    def test_pick_related_subsidiary(self):
+        self.assertEqual(
+            pick_company_for_brand(
+                {'Sealy'},
+                {'Tempur'},
+                {'Sealy': 1, 'Tempur-Pedic': 1, 'Tempur Sealy': 0}),
+            'Tempur-Pedic')
