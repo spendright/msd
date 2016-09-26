@@ -112,8 +112,7 @@ def fill_scraper_brand_map_table_for_companies(
     # "brand dicts" containing:
     # scraper_brands: set of (scraper_id, scraper_company, scraper_brands)
     # brands: set of candidates for canonical name of brand
-    # companies: set of (canonical) companies for brand, sowe can make
-    #            sure brands get pushed down to subsidiaries
+    # companies: set of (canonical) companies for brand
     bds = []
 
     for (scraper_id, scraper_company), company in scraper_company_map.items():
@@ -128,11 +127,13 @@ def fill_scraper_brand_map_table_for_companies(
                     scraper_brands={
                         (scraper_id, scraper_company, scraper_brand)},
                     brands={brand},
+                    companies={company},
                 ))
 
     # add canonical company names as possible brand names
     for company in companies:
-        bds.append(dict(scraper_brands=set(), brands={company}))
+        bds.append(
+            dict(scraper_brands=set(), brands={company}, companies=set()))
 
     # merge brands
     def keyfunc(bd):
@@ -146,10 +147,9 @@ def fill_scraper_brand_map_table_for_companies(
             continue
 
         brand = pick_brand_name(bd['brands'], companies)
-        # allow matching brand with any company in hierarchy
-        # e.g. move Tempur-Pedic and Tempur from Sealy to Tempur-Pedic
-        # because they're both owned by Tempur Sealy
-        company = pick_company_for_brand(company_to_depth, bd['brands'])
+
+        company = pick_company_for_brand(
+            bd['companies'], bd['brands'], company_to_depth)
 
         for (scraper_id, scraper_company, scraper_brand
                 ) in bd['scraper_brands']:
@@ -216,20 +216,34 @@ def pick_brand_name(names, company_names=()):
     return sorted(names, key=keyfunc, reverse=True)[0]
 
 
-def pick_company_for_brand(company_to_depth, brand_names):
+def pick_company_for_brand(companies, brand_names, company_to_depth):
     """Given several companies to which a brand might belong, prefer
     the one that starts with a proposed brand name, and then company
-    lowest in the subsidiary hierarchy"""
+    lowest in the subsidiary hierarchy.
+
+    Also, allow companies that only appear in company_to_depth if the
+    brand name starts with the company name (after normalization)
+    """
     brand_keys = {smunch(b) for b in brand_names}
 
-    def keyfunc(company):
+    sort_keys_and_companies = []
+
+    for company, depth in company_to_depth.items():
         company_key = smunch(company)
 
-        return(not any(company_key.startswith(bk) for bk in brand_keys),
-               -company_to_depth[company],
-               company)
+        starts_with_company = any(
+            company_key.startswith(bk) for bk in brand_keys)
 
-    return sorted(company_to_depth, key=keyfunc)[0]
+        # don't pick subsidiaries that have nothing to do with the brand
+        # (see #59)
+        if not (starts_with_company or company in companies):
+            continue
+
+        sort_key = (not starts_with_company, -depth, company)
+
+        sort_keys_and_companies.append((sort_key, company))
+
+    return sorted(sort_keys_and_companies)[0][1]
 
 
 def split_brand_and_tm(scraper_brand):
