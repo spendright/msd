@@ -127,7 +127,7 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                      scraper_id='campaign.hrc'),
             ])
 
-    def test_push_brand_down_to_subsidiary(self):
+    def test_prefer_subsidiary_for_brand(self):
         # tests #16
         insert_rows(self.scratch_db, 'brand', [
             dict(brand='Puma',
@@ -168,6 +168,38 @@ class TestBuildScraperBrandMapTable(DBTestCase):
                   scraper_brand='Puma',
                   scraper_company='Puma',
                   scraper_id='campaign.btb_fashion'),
+            ])
+
+    def test_dont_push_brand_to_subsidiary(self):
+        # tests #59
+        insert_rows(self.scratch_db, 'brand', [
+            dict(brand='Dove',
+                 company='Unilever',
+                 scraper_id='campaign.hrc'),
+        ])
+
+        insert_rows(self.output_db, 'scraper_company_map', [
+            dict(company='Unilever',
+                 scraper_company='Unilever',
+                 scraper_id='campaign.hrc'),
+        ])
+
+        insert_rows(self.output_db, 'subsidiary', [
+            dict(company='Unilever',
+                 company_depth=0,
+                 subsidiary="Ben & Jerry's",
+                 subsidiary_depth=1),
+        ])
+
+        build_scraper_brand_map_table(self.output_db, self.scratch_db)
+
+        self.assertEqual(
+            select_all(self.output_db, 'scraper_brand_map'),
+            [dict(brand='Dove',
+                  company='Unilever',
+                  scraper_brand='Dove',
+                  scraper_company='Unilever',
+                  scraper_id='campaign.hrc'),
             ])
 
     def test_match_canonical_company_name_only(self):
